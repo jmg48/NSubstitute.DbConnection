@@ -5,7 +5,7 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <CodeAnalysisRuleSet>..\StyleCop.Analyzers.ruleset</CodeAnalysisRuleSet>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageId>DbConnection.NSubstitute</PackageId>
+    <PackageId>NSubstitute.Community.DbConnection</PackageId>
     <RepositoryUrl>https://github.com/jmg48/NSubstitute.DbConnection</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile></PackageLicenseFile>

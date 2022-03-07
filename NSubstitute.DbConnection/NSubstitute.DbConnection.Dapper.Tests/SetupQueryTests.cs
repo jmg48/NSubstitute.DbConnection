@@ -10,14 +10,14 @@ namespace NSubstitute.DbConnection.Dapper.Tests
     public class SetupQueryTests
     {
         [Test]
-        public void ShouldMockQueryUsingAnonymousType()
+        public void ShouldMockQueryUsingConcreteType()
         {
             var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
             mockConnection.SetupQuery(
                 "select * from table",
                 new[]
                 {
-                    new { Key = 1, Value = "abc" },
+                    new KeyValue { Key = 1, Value = "abc" },
                 });
 
             var result = mockConnection.Query<KeyValue>("select * from table").ToList();
@@ -28,14 +28,14 @@ namespace NSubstitute.DbConnection.Dapper.Tests
         }
 
         [Test]
-        public void ShouldMockQueryUsingConcreteType()
+        public void ShouldMockQueryUsingAnonymousType()
         {
             var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
             mockConnection.SetupQuery(
                 "select * from table",
                 new[]
                 {
-                    new KeyValue { Key = 1, Value = "abc" },
+                    new { Key = 1, Value = "abc" },
                 });
 
             var result = mockConnection.Query<KeyValue>("select * from table").ToList();
