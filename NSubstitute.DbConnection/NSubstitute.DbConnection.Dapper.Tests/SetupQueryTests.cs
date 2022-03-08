@@ -38,7 +38,7 @@ namespace NSubstitute.DbConnection.Dapper.Tests
                     new { Key = 1, Value = "abc" },
                 });
 
-            var result = mockConnection.Query<KeyValue>("select * from table").ToList();
+            var result = mockConnection.Query<(int Key, string Value)>("select * from table").ToList();
 
             result.Count.Should().Be(1);
             result[0].Key.Should().Be(1);
@@ -56,7 +56,7 @@ namespace NSubstitute.DbConnection.Dapper.Tests
                     new KeyValueRecord(1, "abc"),
                 });
 
-            var result = mockConnection.Query<KeyValue>("select * from table").ToList();
+            var result = mockConnection.Query<KeyValueRecord>("select * from table").ToList();
 
             result.Count.Should().Be(1);
             result[0].Key.Should().Be(1);
@@ -67,7 +67,7 @@ namespace NSubstitute.DbConnection.Dapper.Tests
         {
             public int Key { get; set; }
 
-            public string Value { get; set; }
+            public string? Value { get; set; }
         }
 
         private record KeyValueRecord(int Key, string Value);
