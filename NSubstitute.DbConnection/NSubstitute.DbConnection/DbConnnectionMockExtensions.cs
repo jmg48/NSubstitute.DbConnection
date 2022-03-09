@@ -120,6 +120,26 @@
             this IDbConnection mockConnection,
             string commandText,
             IReadOnlyList<T1> results1,
+            IReadOnlyList<T2> results2) =>
+            SetupQueryMultiple(mockConnection, commandText, new Dictionary<string, object>(), results1, results2);
+
+        /// <summary>
+        /// Sets up a mock query which will return the given results for the specified command text
+        /// </summary>
+        /// <typeparam name="T1">The record type of the first result set</typeparam>
+        /// <typeparam name="T2">The record type of the second result set</typeparam>
+        /// <param name="mockConnection">The connection to add the query to</param>
+        /// <param name="commandText">The command text to match on</param>
+        /// <param name="parameters">The parameter values to match on</param>
+        /// <param name="results1">The first result set to return</param>
+        /// <param name="results2">The second result set to return</param>
+        /// <returns>The connection</returns>
+        /// <exception cref="NotSupportedException">If SetupCommands() has not been called on the connection</exception>
+        public static IDbConnection SetupQueryMultiple<T1, T2>(
+            this IDbConnection mockConnection,
+            string commandText,
+            IReadOnlyDictionary<string, object> parameters,
+            IReadOnlyList<T1> results1,
             IReadOnlyList<T2> results2)
         {
             if (!(mockConnection is DbConnectionWrapper connectionWrapper))
@@ -127,7 +147,7 @@
                 throw new NotSupportedException($"{nameof(SetupCommands)} on this connection before setting up queries");
             }
 
-            connectionWrapper.AddQueryMultiple(commandText, results1, results2);
+            connectionWrapper.AddQueryMultiple(commandText, parameters, results1, results2);
 
             return mockConnection;
         }
@@ -185,25 +205,7 @@
             public void AddQuery<T>(string commandText, IReadOnlyDictionary<string, object> parameters, IReadOnlyList<T> results) =>
                 _queries.Add(
                     (
-                        command =>
-                        {
-                            if (command.CommandText != commandText || command.Parameters.Count != parameters.Count)
-                            {
-                                return false;
-                            }
-
-                            for (var i = 0; i < command.Parameters.Count; i++)
-                            {
-                                if (!(command.Parameters[i] is DbParameter parameter) ||
-                                    !parameters.TryGetValue(parameter.ParameterName, out var parameterValue) ||
-                                    !Equals(parameterValue, parameter.Value))
-                                {
-                                    return false;
-                                }
-                            }
-
-                            return true;
-                        },
+                        command => Match(command, commandText, parameters),
                         mockReader =>
                         {
                             var properties = typeof(T).GetProperties();
@@ -221,10 +223,10 @@
                             mockReader[Arg.Any<int>()].Returns(ci => properties[(int)ci[0]].GetValue(results[rowIndex]));
                         }));
 
-            public void AddQueryMultiple<T1, T2>(string commandText, IReadOnlyList<T1> results1, IReadOnlyList<T2> results2) =>
+            public void AddQueryMultiple<T1, T2>(string commandText, IReadOnlyDictionary<string, object> parameters, IReadOnlyList<T1> results1, IReadOnlyList<T2> results2) =>
                 _queries.Add(
                     (
-                        command => command.CommandText == commandText,
+                        command => Match(command, commandText, parameters),
                         mockReader =>
                         {
                             var properties = new[] { typeof(T1).GetProperties(), typeof(T2).GetProperties() };
@@ -250,6 +252,26 @@
 
                             mockReader[Arg.Any<int>()].Returns(ci => properties[resultSetIndex][(int)ci[0]].GetValue(results[resultSetIndex](rowIndex)));
                         }));
+
+            private static bool Match(IDbCommand command, string commandText, IReadOnlyDictionary<string, object> parameters)
+            {
+                if (command.CommandText != commandText || command.Parameters.Count != parameters.Count)
+                {
+                    return false;
+                }
+
+                for (var i = 0; i < command.Parameters.Count; i++)
+                {
+                    if (!(command.Parameters[i] is DbParameter parameter) ||
+                        !parameters.TryGetValue(parameter.ParameterName, out var parameterValue) ||
+                        !Equals(parameterValue, parameter.Value))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
 
             private static void SetupNextResult(DbDataReader reader, Func<CallInfo, bool> nextResult)
             {
