@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace NSubstitute.DbConnection.Dapper.Tests
 {
     [TestFixture]
-    public class SetupQueryTests
+    public class DapperQueryTests
     {
         [Test]
         public void ShouldMockQueryUsingConcreteType()

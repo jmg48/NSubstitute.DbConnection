@@ -3,6 +3,10 @@
     using System;
     using System.Collections.Generic;
     using System.Data;
+    using System.Data.Common;
+    using System.Threading;
+    using NSubstitute.Core;
+    using NSubstitute.ExceptionExtensions;
 
     public static class DbConnnectionMockExtensions
     {
@@ -25,9 +29,14 @@
                 .Returns(
                     _ =>
                     {
-                        var mockCommand = Substitute.For<IDbCommand>();
+                        var mockCommand = Substitute.For<DbCommand>();
+                        mockCommand.Parameters.Returns(ci => Substitute.For<DbParameterCollection>());
                         mockCommand.ExecuteReader().Returns(ci => result.Configure(mockCommand));
                         mockCommand.ExecuteReader(Arg.Any<CommandBehavior>()).Returns(ci => result.Configure(mockCommand));
+                        mockCommand.ExecuteReaderAsync().Returns(ci => result.Configure(mockCommand));
+                        mockCommand.ExecuteReaderAsync(Arg.Any<CancellationToken>()).Returns(ci => result.Configure(mockCommand));
+                        mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>()).Returns(ci => result.Configure(mockCommand));
+                        mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>(), Arg.Any<CancellationToken>()).Returns(ci => result.Configure(mockCommand));
                         return mockCommand;
                     });
 
@@ -66,7 +75,11 @@
         /// <param name="results2">The second result set to return</param>
         /// <returns>The connection</returns>
         /// <exception cref="NotSupportedException">If SetupCommands() has not been called on the connection</exception>
-        public static IDbConnection SetupQueryMultiple<T1, T2>(this IDbConnection mockConnection, string commandText, IReadOnlyList<T1> results1, IReadOnlyList<T2> results2)
+        public static IDbConnection SetupQueryMultiple<T1, T2>(
+            this IDbConnection mockConnection,
+            string commandText,
+            IReadOnlyList<T1> results1,
+            IReadOnlyList<T2> results2)
         {
             if (!(mockConnection is DbConnectionWrapper connectionWrapper))
             {
@@ -80,7 +93,7 @@
 
         private class DbConnectionWrapper : IDbConnection
         {
-            private readonly Dictionary<string, Action<IDataReader>> _queries = new Dictionary<string, Action<IDataReader>>();
+            private readonly Dictionary<string, Action<DbDataReader>> _queries = new Dictionary<string, Action<DbDataReader>>();
 
             public DbConnectionWrapper(IDbConnection inner) => Inner = inner;
 
@@ -112,9 +125,9 @@
 
             public void Open() => Inner.Open();
 
-            public IDataReader Configure(IDbCommand mockCommand)
+            public DbDataReader Configure(IDbCommand mockCommand)
             {
-                var mockReader = Substitute.For<IDataReader>();
+                var mockReader = Substitute.For<DbDataReader>();
 
                 if (_queries.TryGetValue(mockCommand.CommandText, out var query))
                 {
@@ -131,14 +144,16 @@
                     {
                         var properties = typeof(T).GetProperties();
 
-                        mockReader.NextResult().Returns(ci => false);
+                        bool NextResult(CallInfo ci) => false;
+                        mockReader.NextResult().Returns(NextResult);
 
                         mockReader.FieldCount.Returns(properties.Length);
                         mockReader.GetName(Arg.Any<int>()).Returns(ci => properties[(int)ci[0]].Name);
                         mockReader.GetFieldType(Arg.Any<int>()).Returns(ci => properties[(int)ci[0]].PropertyType);
 
                         var rowIndex = -1;
-                        mockReader.Read().Returns(ci => ++rowIndex < results.Count);
+                        SetupRead(mockReader, ci => ++rowIndex < results.Count);
+
                         mockReader[Arg.Any<int>()].Returns(ci => properties[(int)ci[0]].GetValue(results[rowIndex]));
                     });
 
@@ -153,19 +168,37 @@
 
                         var resultSetIndex = 0;
                         var rowIndex = -1;
-                        mockReader.NextResult().Returns(ci =>
-                        {
-                            rowIndex = -1;
-                            return ++resultSetIndex < 2;
-                        });
+
+                        SetupNextResult(
+                            mockReader,
+                            ci =>
+                            {
+                                rowIndex = -1;
+                                return ++resultSetIndex < 2;
+                            });
 
                         mockReader.FieldCount.Returns(ci => properties[resultSetIndex].Length);
                         mockReader.GetName(Arg.Any<int>()).Returns(ci => properties[resultSetIndex][(int)ci[0]].Name);
                         mockReader.GetFieldType(Arg.Any<int>()).Returns(ci => properties[resultSetIndex][(int)ci[0]].PropertyType);
 
-                        mockReader.Read().Returns(ci => ++rowIndex < rowCounts[resultSetIndex]);
+                        SetupRead(mockReader, ci => ++rowIndex < rowCounts[resultSetIndex]);
+
                         mockReader[Arg.Any<int>()].Returns(ci => properties[resultSetIndex][(int)ci[0]].GetValue(results[resultSetIndex](rowIndex)));
                     });
+
+            private static void SetupNextResult(DbDataReader reader, Func<CallInfo, bool> nextResult)
+            {
+                reader.NextResult().Returns(nextResult);
+                reader.NextResultAsync().Returns(nextResult);
+                reader.NextResultAsync(Arg.Any<CancellationToken>()).Returns(nextResult);
+            }
+
+            private static void SetupRead(DbDataReader reader, Func<CallInfo, bool> read)
+            {
+                reader.Read().Returns(read);
+                reader.ReadAsync().Returns(read);
+                reader.ReadAsync(Arg.Any<CancellationToken>()).Returns(read);
+            }
         }
     }
 }
