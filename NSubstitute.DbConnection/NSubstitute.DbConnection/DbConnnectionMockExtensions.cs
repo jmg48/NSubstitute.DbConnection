@@ -30,13 +30,33 @@
                     _ =>
                     {
                         var mockCommand = Substitute.For<DbCommand>();
-                        mockCommand.Parameters.Returns(ci => Substitute.For<DbParameterCollection>());
-                        mockCommand.ExecuteReader().Returns(ci => result.Configure(mockCommand));
-                        mockCommand.ExecuteReader(Arg.Any<CommandBehavior>()).Returns(ci => result.Configure(mockCommand));
-                        mockCommand.ExecuteReaderAsync().Returns(ci => result.Configure(mockCommand));
-                        mockCommand.ExecuteReaderAsync(Arg.Any<CancellationToken>()).Returns(ci => result.Configure(mockCommand));
-                        mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>()).Returns(ci => result.Configure(mockCommand));
-                        mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>(), Arg.Any<CancellationToken>()).Returns(ci => result.Configure(mockCommand));
+                        var mockParameters = Substitute.For<DbParameterCollection>();
+                        var parameters = new List<object>();
+
+                        mockParameters.Add(Arg.Any<object>()).Returns(
+                            ci =>
+                            {
+                                parameters.Add(ci[0]);
+                                return parameters.Count - 1;
+                            });
+                        mockParameters.Count.Returns(parameters.Count);
+                        mockParameters.When(x => x.AddRange(Arg.Any<Array>())).Throw<NotSupportedException>();
+                        mockParameters.When(x => x.Clear()).Do(ci => parameters.Clear());
+                        mockParameters.Contains(Arg.Any<object>()).Throws<NotSupportedException>();
+                        mockParameters.Contains(Arg.Any<string>()).Throws<NotSupportedException>();
+                        mockParameters[Arg.Any<int>()].Throws<NotSupportedException>();
+                        mockParameters[Arg.Any<string>()].Throws<NotSupportedException>();
+
+                        mockCommand.Parameters.Returns(ci => mockParameters);
+                        mockCommand.CreateParameter().Returns(ci => Substitute.For<DbParameter>());
+
+                        DbDataReader ExecuteReader(CallInfo ci) => result.Configure(mockCommand);
+                        mockCommand.ExecuteReader().Returns(ExecuteReader);
+                        mockCommand.ExecuteReader(Arg.Any<CommandBehavior>()).Returns(ExecuteReader);
+                        mockCommand.ExecuteReaderAsync().Returns(ExecuteReader);
+                        mockCommand.ExecuteReaderAsync(Arg.Any<CancellationToken>()).Returns(ExecuteReader);
+                        mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>()).Returns(ExecuteReader);
+                        mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>(), Arg.Any<CancellationToken>()).Returns(ExecuteReader);
                         return mockCommand;
                     });
 

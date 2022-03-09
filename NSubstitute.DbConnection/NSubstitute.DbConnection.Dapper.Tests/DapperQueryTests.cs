@@ -1,3 +1,4 @@
+using System;
 using System.Data;
 using System.Linq;
 using Dapper;
@@ -57,6 +58,30 @@ namespace NSubstitute.DbConnection.Dapper.Tests
                 });
 
             var result = mockConnection.Query<KeyValueRecord>("select * from table").ToList();
+
+            result.Count.Should().Be(1);
+            result[0].Key.Should().Be(1);
+            result[0].Value.Should().Be("abc");
+        }
+
+        [Test]
+        public void ShouldMockParameterisedQuery()
+        {
+            var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+            mockConnection.SetupQuery(
+                "select * from table where id = @id",
+                new[]
+                {
+                    new KeyValueRecord(1, "abc"),
+                });
+
+            var result = mockConnection.Query<KeyValueRecord>(
+                "select * from table where id = @id",
+                new
+                {
+                    agencyId = 1,
+                },
+                commandType: CommandType.StoredProcedure).ToList();
 
             result.Count.Should().Be(1);
             result[0].Key.Should().Be(1);
