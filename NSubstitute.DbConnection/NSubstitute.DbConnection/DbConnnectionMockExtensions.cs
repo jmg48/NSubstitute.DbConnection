@@ -169,7 +169,6 @@
             {
                 var query = new MockQuery
                 {
-                    CommandText = commandText,
                     Matcher = queryString => string.Equals(queryString.Trim(), commandText.Trim(), StringComparison.InvariantCultureIgnoreCase),
                 };
                 _queries.Add(query);
@@ -186,8 +185,6 @@
 
         private class MockQuery : IMockQueryBuilder, IMockQueryResultBuilder
         {
-            public string CommandText { get; set; }
-
             public Dictionary<string, object> Parameters { get; set; }
 
             public List<(Type RowType, IReadOnlyList<object> Rows)> ResultSets { get; } = new List<(Type RowType, IReadOnlyList<object> Rows)>();
