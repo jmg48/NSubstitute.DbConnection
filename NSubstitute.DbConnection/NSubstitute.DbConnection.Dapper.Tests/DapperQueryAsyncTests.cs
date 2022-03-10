@@ -14,12 +14,7 @@ namespace NSubstitute.DbConnection.Dapper.Tests
         public async Task ShouldMockQueryAsyncUsingConcreteType()
         {
             var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
-            mockConnection.SetupQuery(
-                "select * from table",
-                new[]
-                {
-                    new KeyValue { Key = 1, Value = "abc" },
-                });
+            mockConnection.SetupQuery("select * from table").Returns(new KeyValue { Key = 1, Value = "abc" });
 
             var result = (await mockConnection.QueryAsync<KeyValue>("select * from table")).ToList();
 
@@ -32,12 +27,7 @@ namespace NSubstitute.DbConnection.Dapper.Tests
         public async Task ShouldMockQueryAsyncUsingAnonymousType()
         {
             var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
-            mockConnection.SetupQuery(
-                "select * from table",
-                new[]
-                {
-                    new { Key = 1, Value = "abc" },
-                });
+            mockConnection.SetupQuery("select * from table").Returns(new { Key = 1, Value = "abc" });
 
             var result = (await mockConnection.QueryAsync<(int Key, string Value)>("select * from table")).ToList();
 
@@ -50,12 +40,7 @@ namespace NSubstitute.DbConnection.Dapper.Tests
         public async Task ShouldMockQueryAsyncUsingRecordType()
         {
             var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
-            mockConnection.SetupQuery(
-                "select * from table",
-                new[]
-                {
-                    new KeyValueRecord(1, "abc"),
-                });
+            mockConnection.SetupQuery("select * from table").Returns(new KeyValueRecord(1, "abc"));
 
             var result = (await mockConnection.QueryAsync<KeyValueRecord>("select * from table")).ToList();
 

@@ -15,12 +15,7 @@ namespace NSubstitute.DbConnection.Dapper.Tests
         public void ShouldMockQueryUsingConcreteType()
         {
             var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
-            mockConnection.SetupQuery(
-                "select * from table",
-                new[]
-                {
-                    new KeyValue { Key = 1, Value = "abc" },
-                });
+            mockConnection.SetupQuery("select * from table").Returns(new KeyValue { Key = 1, Value = "abc" });
 
             var result = mockConnection.Query<KeyValue>("select * from table").ToList();
 
@@ -33,12 +28,7 @@ namespace NSubstitute.DbConnection.Dapper.Tests
         public void ShouldMockQueryUsingAnonymousType()
         {
             var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
-            mockConnection.SetupQuery(
-                "select * from table",
-                new[]
-                {
-                    new { Key = 1, Value = "abc" },
-                });
+            mockConnection.SetupQuery("select * from table").Returns(new { Key = 1, Value = "abc" });
 
             var result = mockConnection.Query<(int Key, string Value)>("select * from table").ToList();
 
@@ -51,12 +41,12 @@ namespace NSubstitute.DbConnection.Dapper.Tests
         public void ShouldMockQueryUsingRecordType()
         {
             var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
-            mockConnection.SetupQuery(
-                "select * from table",
-                new[]
-                {
-                    new KeyValueRecord(1, "abc"),
-                });
+            mockConnection.SetupQuery("select * from table")
+                .Returns(
+                    new[]
+                    {
+                        new KeyValueRecord(1, "abc"),
+                    });
 
             var result = mockConnection.Query<KeyValueRecord>("select * from table").ToList();
 
@@ -69,27 +59,21 @@ namespace NSubstitute.DbConnection.Dapper.Tests
         public void ShouldMockParameterisedQuery()
         {
             var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
-            mockConnection.SetupQuery(
-                "select * from table where id = @id",
-                new Dictionary<string, object>
-                {
-                    { "id", 1 },
-                },
-                new[]
-                {
-                    new KeyValueRecord(1, "abc"),
-                });
+            mockConnection.SetupQuery("select * from table where id = @id")
+                .WithParameters(
+                    new Dictionary<string, object>
+                    {
+                        { "id", 1 },
+                    })
+                .Returns(new KeyValueRecord(1, "abc"));
 
-            mockConnection.SetupQuery(
-                "select * from table where id = @id",
-                new Dictionary<string, object>
-                {
-                    { "id", 2 },
-                },
-                new[]
-                {
-                    new KeyValueRecord(2, "def"),
-                });
+            mockConnection.SetupQuery("select * from table where id = @id")
+                .WithParameters(
+                    new Dictionary<string, object>
+                    {
+                        { "id", 2 },
+                    })
+                .Returns(new KeyValueRecord(2, "def"));
 
             var result1 = mockConnection.Query<KeyValueRecord>(
                     "select * from table where id = @id",
@@ -116,16 +100,13 @@ namespace NSubstitute.DbConnection.Dapper.Tests
         public void ShouldFailWhenNoMatchingQuery()
         {
             var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
-            mockConnection.SetupQuery(
-                "select * from table where id = @id",
-                new Dictionary<string, object>
-                {
-                    { "id", 1 },
-                },
-                new[]
-                {
-                    new KeyValueRecord(1, "abc"),
-                });
+            mockConnection.SetupQuery("select * from table where id = @id")
+                .WithParameters(
+                    new Dictionary<string, object>
+                    {
+                        { "id", 1 },
+                    })
+                .Returns(new KeyValueRecord(1, "abc"));
 
             var errorMessage = "No matching query found - call SetupQuery to add mocked queries";
 
