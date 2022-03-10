@@ -8,6 +8,8 @@ using NUnit.Framework;
 
 namespace NSubstitute.DbConnection.Dapper.Tests
 {
+    using System.Text.RegularExpressions;
+
     [TestFixture]
     public class DapperQueryTests
     {
@@ -197,6 +199,32 @@ namespace NSubstitute.DbConnection.Dapper.Tests
             var result = () => mockConnection.Query<KeyValueRecord>("someProc", new { id = 1 }, commandType: CommandType.StoredProcedure);
 
             result.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
+        }
+
+        [Test]
+        public void ShouldUseSuppliedMatcherOverDefaultQueryMatching()
+        {
+            var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+            mockConnection.SetupQuery(command => command.Contains("from table"))
+                .Returns(new KeyValueRecord(1, "abc"));
+
+            var result = mockConnection.Query<KeyValueRecord>("select * from table t inner join otherTable ot on ot.id = t.otherId").ToList();
+            result.Count.Should().Be(1);
+            result[0].Key.Should().Be(1);
+            result[0].Value.Should().Be("abc");
+        }
+
+        [Test]
+        public void ShouldUseRegexMatcherOverDefaultQueryMatching()
+        {
+            var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+            mockConnection.SetupQuery(new Regex("select .+ from"))
+                .Returns(new KeyValueRecord(1, "abc"));
+
+            var result = mockConnection.Query<KeyValueRecord>("select id, foo,bar from table where id = @id").ToList();
+            result.Count.Should().Be(1);
+            result[0].Key.Should().Be(1);
+            result[0].Value.Should().Be("abc");
         }
 
         private class KeyValue
