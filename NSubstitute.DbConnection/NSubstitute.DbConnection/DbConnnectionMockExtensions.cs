@@ -145,11 +145,19 @@
 
             public List<(Type RowType, IReadOnlyList<object> Rows)> ResultSets { get; } = new List<(Type RowType, IReadOnlyList<object> Rows)>();
 
+            public Predicate<IDbCommand> Matcher { get; set; } = null;
+
             public IMockQueryBuilder WithNoParameters() => WithParameters(new Dictionary<string, object>());
 
             public IMockQueryBuilder WithParameters(IReadOnlyDictionary<string, object> parameters)
             {
                 Parameters = parameters.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                return this;
+            }
+
+            public IMockQueryBuilder WithMatcher(Predicate<IDbCommand> predicate)
+            {
+                Matcher = predicate;
                 return this;
             }
 
@@ -179,7 +187,11 @@
 
             public bool Matches(IDbCommand command)
             {
-                if (command.CommandText != CommandText)
+                if (Matcher != null)
+                {
+                    return Matcher.Invoke(command);
+                }
+
                 {
                     return false;
                 }

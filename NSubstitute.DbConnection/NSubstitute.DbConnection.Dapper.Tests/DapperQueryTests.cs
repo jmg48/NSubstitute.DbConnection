@@ -199,6 +199,20 @@ namespace NSubstitute.DbConnection.Dapper.Tests
             result.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
         }
 
+        [Test]
+        public void ShouldUseSuppliedMatcherOverDefaultQueryMatching()
+        {
+            var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+            mockConnection.SetupQuery("select * from table where id = @id")
+                .WithMatcher((command) => command.CommandText.Contains("from table"))
+                .Returns(new KeyValueRecord(1, "abc"));
+
+            var result = mockConnection.Query<KeyValueRecord>("select * from table t inner join otherTable ot on ot.id = t.otherId").ToList();
+            result.Count.Should().Be(1);
+            result[0].Key.Should().Be(1);
+            result[0].Value.Should().Be("abc");
+        }
+
         private class KeyValue
         {
             public int Key { get; set; }
