@@ -220,7 +220,7 @@
                     ci =>
                     {
                         rowIndex = -1;
-                        return ++resultSetIndex < 2;
+                        return ++resultSetIndex < ResultSets.Count;
                     });
 
                 mockReader.FieldCount.Returns(ci => properties[resultSetIndex].Length);
