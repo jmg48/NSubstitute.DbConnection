@@ -167,7 +167,11 @@
 
             public IMockQueryBuilder AddQuery(string commandText)
             {
-                var query = new MockQuery { CommandText = commandText };
+                var query = new MockQuery
+                {
+                    CommandText = commandText,
+                    Matcher = queryString => string.Equals(queryString.Trim(), commandText.Trim(), StringComparison.InvariantCultureIgnoreCase),
+                };
                 _queries.Add(query);
                 return query;
             }
@@ -188,7 +192,7 @@
 
             public List<(Type RowType, IReadOnlyList<object> Rows)> ResultSets { get; } = new List<(Type RowType, IReadOnlyList<object> Rows)>();
 
-            public Func<string, bool> Matcher { get; set; } = null;
+            public Func<string, bool> Matcher { get; set; }
 
             public IMockQueryBuilder WithNoParameters() => WithParameters(new Dictionary<string, object>());
 
@@ -224,12 +228,7 @@
 
             public bool Matches(IDbCommand command)
             {
-                if (Matcher != null)
-                {
-                    return Matcher(command.CommandText);
-                }
-
-                if (!string.Equals(command.CommandText.Trim(), CommandText.Trim(), StringComparison.InvariantCultureIgnoreCase))
+                if (!Matcher(command.CommandText))
                 {
                     return false;
                 }
