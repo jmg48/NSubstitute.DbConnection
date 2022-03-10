@@ -11,6 +11,8 @@ namespace NSubstitute.DbConnection.Dapper.Tests
     [TestFixture]
     public class DapperQueryTests
     {
+        private static readonly string noMatchingQueryErrorMessage = "No matching query found - call SetupQuery to add mocked queries";
+
         [Test]
         public void ShouldMockQueryUsingConcreteType()
         {
@@ -97,7 +99,18 @@ namespace NSubstitute.DbConnection.Dapper.Tests
         }
 
         [Test]
-        public void ShouldFailWhenNoMatchingQuery()
+        public void ShouldFailWhenQueryTextDoesNotMatch()
+        {
+            var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+            mockConnection.SetupQuery("select * from table")
+                .Returns(new KeyValueRecord(1, "abc"));
+
+            var resultWrongSql = () => mockConnection.Query<KeyValueRecord>("select * from anotherTable");
+            resultWrongSql.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
+        }
+
+        [Test]
+        public void ShouldFailWhenQueryParametersDoNotMatch()
         {
             var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
             mockConnection.SetupQuery("select * from table where id = @id")
@@ -108,23 +121,18 @@ namespace NSubstitute.DbConnection.Dapper.Tests
                     })
                 .Returns(new KeyValueRecord(1, "abc"));
 
-            var errorMessage = "No matching query found - call SetupQuery to add mocked queries";
-
-            var resultWrongSql = () => mockConnection.Query<KeyValueRecord>("select * from table");
-            resultWrongSql.Should().Throw<NotSupportedException>().WithMessage(errorMessage);
-
             var resultNoParameters = () => mockConnection.Query<KeyValueRecord>("select * from table where id = @id");
-            resultNoParameters.Should().Throw<NotSupportedException>().WithMessage(errorMessage);
+            resultNoParameters.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
 
             var resultWrongParameterName = () => mockConnection.Query<KeyValueRecord>(
                 "select * from table where id = @id",
                 new Dictionary<string, object> { { "x", 1 } });
-            resultWrongParameterName.Should().Throw<NotSupportedException>().WithMessage(errorMessage);
+            resultWrongParameterName.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
 
             var resultWrongParameterValue = () => mockConnection.Query<KeyValueRecord>(
                 "select * from table where id = @id",
                 new Dictionary<string, object> { { "id", 2 } });
-            resultWrongParameterValue.Should().Throw<NotSupportedException>().WithMessage(errorMessage);
+            resultWrongParameterValue.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
 
             var resultExtraParameter = () => mockConnection.Query<KeyValueRecord>(
                 "select * from table where id = @id",
@@ -133,7 +141,62 @@ namespace NSubstitute.DbConnection.Dapper.Tests
                     { "id", 1 },
                     { "x", 2 },
                 });
-            resultExtraParameter.Should().Throw<NotSupportedException>().WithMessage(errorMessage);
+            resultExtraParameter.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
+        }
+
+
+        [Test]
+        public void ShouldIgnoreParametersWhenNotSetUp()
+        {
+            var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+            mockConnection.SetupQuery("select * from table")
+                .Returns(new KeyValueRecord(1, "abc"));
+
+            var result = mockConnection.Query<KeyValueRecord>("select * from table", new { id = 1 }).ToList();
+
+            result.Count.Should().Be(1);
+            result[0].Key.Should().Be(1);
+            result[0].Value.Should().Be("abc");
+        }
+
+        [Test]
+        public void ShouldFailWhenSetUpWithNoParameters()
+        {
+            var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+            mockConnection.SetupQuery("select * from table where @id = 1")
+                .WithNoParameters()
+                .Returns(new KeyValueRecord(1, "abc"));
+
+            var result = () => mockConnection.Query<KeyValueRecord>("select * from table where @id = 1", new { id = 1 });
+            result.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
+        }
+
+        [Test]
+        public void DapperDoesntPassParametersThatAreNotReferencedInTextQuery()
+        {
+            var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+            mockConnection.SetupQuery("select * from table")
+                .WithNoParameters()
+                .Returns(new KeyValueRecord(1, "abc"));
+
+            var result = mockConnection.Query<KeyValueRecord>("select * from table", new { id = 1 }, commandType: CommandType.Text).ToList();
+
+            result.Count.Should().Be(1);
+            result[0].Key.Should().Be(1);
+            result[0].Value.Should().Be("abc");
+        }
+
+        [Test]
+        public void DapperAlwaysPassesParametersToStoredProcedureQuery()
+        {
+            var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+            mockConnection.SetupQuery("someProc")
+                .WithNoParameters()
+                .Returns(new KeyValueRecord(1, "abc"));
+
+            var result = () => mockConnection.Query<KeyValueRecord>("someProc", new { id = 1 }, commandType: CommandType.StoredProcedure);
+
+            result.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
         }
 
         private class KeyValue
