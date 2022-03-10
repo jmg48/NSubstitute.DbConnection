@@ -5,6 +5,7 @@
     using System.Data;
     using System.Data.Common;
     using System.Linq;
+    using System.Text.RegularExpressions;
     using System.Threading;
     using NSubstitute.Core;
     using NSubstitute.ExceptionExtensions;
@@ -77,6 +78,20 @@
             var connectionWrapper = CheckConnectionSetup(mockConnection);
 
             return connectionWrapper.AddQuery(commandText);
+        }
+
+        /// <summary>
+        /// Returns a mock query builder which will match the specified regex
+        /// </summary>
+        /// <param name="mockConnection">The connection to add the query to</param>
+        /// <param name="commandRegex">The regex to match on</param>
+        /// <returns>The query builder</returns>
+        /// <exception cref="NotSupportedException">If SetupCommands() has not been called on the connection</exception>
+        public static IMockQueryBuilder SetupQuery(this IDbConnection mockConnection, Regex commandRegex)
+        {
+            var connectionWrapper = CheckConnectionSetup(mockConnection);
+
+            return connectionWrapper.AddQuery(commandRegex.IsMatch);
         }
 
         /// <summary>
