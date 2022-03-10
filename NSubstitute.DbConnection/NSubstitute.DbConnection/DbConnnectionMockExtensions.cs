@@ -84,14 +84,14 @@
         /// Returns a mock query builder which will match the specified regex
         /// </summary>
         /// <param name="mockConnection">The connection to add the query to</param>
-        /// <param name="commandRegex">The regex to match on</param>
+        /// <param name="queryRegex">The regex to match on</param>
         /// <returns>The query builder</returns>
         /// <exception cref="NotSupportedException">If SetupCommands() has not been called on the connection</exception>
-        public static IMockQueryBuilder SetupQuery(this IDbConnection mockConnection, Regex commandRegex)
+        public static IMockQueryBuilder SetupQuery(this IDbConnection mockConnection, Regex queryRegex)
         {
             var connectionWrapper = CheckConnectionSetup(mockConnection);
 
-            return connectionWrapper.AddQuery(commandRegex.IsMatch);
+            return connectionWrapper.AddQuery(queryRegex.IsMatch);
         }
 
         /// <summary>
@@ -169,7 +169,7 @@
             {
                 var query = new MockQuery
                 {
-                    Matcher = queryString => string.Equals(queryString.Trim(), commandText.Trim(), StringComparison.InvariantCultureIgnoreCase),
+                    CommandTextMatcher = queryString => string.Equals(queryString.Trim(), commandText.Trim(), StringComparison.InvariantCultureIgnoreCase),
                 };
                 _queries.Add(query);
                 return query;
@@ -177,7 +177,7 @@
 
             public IMockQueryBuilder AddQuery(Func<string, bool> matcher)
             {
-                var query = new MockQuery { Matcher = matcher };
+                var query = new MockQuery { CommandTextMatcher = matcher };
                 _queries.Add(query);
                 return query;
             }
@@ -189,7 +189,7 @@
 
             public List<(Type RowType, IReadOnlyList<object> Rows)> ResultSets { get; } = new List<(Type RowType, IReadOnlyList<object> Rows)>();
 
-            public Func<string, bool> Matcher { get; set; }
+            public Func<string, bool> CommandTextMatcher { get; set; }
 
             public IMockQueryBuilder WithNoParameters() => WithParameters(new Dictionary<string, object>());
 
@@ -225,7 +225,7 @@
 
             public bool Matches(IDbCommand command)
             {
-                if (!Matcher(command.CommandText))
+                if (!CommandTextMatcher(command.CommandText))
                 {
                     return false;
                 }
