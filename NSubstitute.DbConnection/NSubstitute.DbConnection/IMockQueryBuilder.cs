@@ -34,12 +34,5 @@
         /// <param name="results">The result set</param>
         /// <returns>The result builder</returns>
         IMockQueryResultBuilder Returns<T>(params T[] results);
-
-        /// <summary>
-        /// Specifies that the query will only match if the given predicate returns true. Takes precedent over command text and query parameters.
-        /// </summary>
-        /// <param name="predicate">The predicate to match on</param>
-        /// <returns>The query builder</returns>
-        IMockQueryBuilder WithMatcher(Predicate<IDbCommand> predicate);
     }
 }

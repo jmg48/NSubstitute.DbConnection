@@ -74,12 +74,33 @@
         /// <exception cref="NotSupportedException">If SetupCommands() has not been called on the connection</exception>
         public static IMockQueryBuilder SetupQuery(this IDbConnection mockConnection, string commandText)
         {
+            var connectionWrapper = CheckConnectionSetup(mockConnection);
+
+            return connectionWrapper.AddQuery(commandText);
+        }
+
+        /// <summary>
+        /// Returns a mock query builder which will match the specified delegate
+        /// </summary>
+        /// <param name="mockConnection">The connection to add the query to</param>
+        /// <param name="queryMatcher">The delegate to match on</param>
+        /// <returns>The query builder</returns>
+        /// <exception cref="NotSupportedException">If SetupCommands() has not been called on the connection</exception>
+        public static IMockQueryBuilder SetupQuery(this IDbConnection mockConnection, Func<string, bool> queryMatcher)
+        {
+            var connectionWrapper = CheckConnectionSetup(mockConnection);
+
+            return connectionWrapper.AddQuery(queryMatcher);
+        }
+
+        private static DbConnectionWrapper CheckConnectionSetup(IDbConnection mockConnection)
+        {
             if (!(mockConnection is DbConnectionWrapper connectionWrapper))
             {
                 throw new NotSupportedException($"{nameof(SetupCommands)} on this connection before setting up queries");
             }
 
-            return connectionWrapper.AddQuery(commandText);
+            return connectionWrapper;
         }
 
         private class DbConnectionWrapper : IDbConnection
@@ -135,6 +156,13 @@
                 _queries.Add(query);
                 return query;
             }
+
+            public IMockQueryBuilder AddQuery(Func<string, bool> matcher)
+            {
+                var query = new MockQuery { Matcher = matcher };
+                _queries.Add(query);
+                return query;
+            }
         }
 
         private class MockQuery : IMockQueryBuilder, IMockQueryResultBuilder
@@ -145,19 +173,13 @@
 
             public List<(Type RowType, IReadOnlyList<object> Rows)> ResultSets { get; } = new List<(Type RowType, IReadOnlyList<object> Rows)>();
 
-            public Predicate<IDbCommand> Matcher { get; set; } = null;
+            public Func<string, bool> Matcher { get; set; } = null;
 
             public IMockQueryBuilder WithNoParameters() => WithParameters(new Dictionary<string, object>());
 
             public IMockQueryBuilder WithParameters(IReadOnlyDictionary<string, object> parameters)
             {
                 Parameters = parameters.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                return this;
-            }
-
-            public IMockQueryBuilder WithMatcher(Predicate<IDbCommand> predicate)
-            {
-                Matcher = predicate;
                 return this;
             }
 
@@ -189,7 +211,7 @@
             {
                 if (Matcher != null)
                 {
-                    return Matcher.Invoke(command);
+                    return Matcher(command.CommandText);
                 }
 
                 if (!string.Equals(command.CommandText.Trim(), CommandText.Trim(), StringComparison.InvariantCultureIgnoreCase))
