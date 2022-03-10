@@ -192,6 +192,7 @@
                     return Matcher.Invoke(command);
                 }
 
+                if (!string.Equals(command.CommandText.Trim(), CommandText.Trim(), StringComparison.InvariantCultureIgnoreCase))
                 {
                     return false;
                 }
