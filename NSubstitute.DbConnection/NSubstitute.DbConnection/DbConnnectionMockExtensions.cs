@@ -18,6 +18,25 @@
         /// <param name="mockConnection">An NSubstitute mock connection object</param>
         /// <returns>A mock connection object that can be used to set up mock queries</returns>
         /// <exception cref="NotSupportedException">If SetupCommands() has already been called on this connection</exception>
+        public static DbConnection SetupCommands(this DbConnection mockConnection)
+        {
+            if (mockConnection is DbConnectionWrapper)
+            {
+                throw new NotSupportedException($"{nameof(SetupCommands)} has already been called on this connection");
+            }
+
+            var result = new DbConnectionWrapper(mockConnection);
+            mockConnection.State.Returns(ConnectionState.Open);
+            mockConnection.CreateCommand().Returns(_ => CreateMockCommand(result));
+            return result;
+        }
+
+        /// <summary>
+        /// Initialises mock behaviour for IDbConnection.CreateCommand()
+        /// </summary>
+        /// <param name="mockConnection">An NSubstitute mock connection object</param>
+        /// <returns>A mock connection object that can be used to set up mock queries</returns>
+        /// <exception cref="NotSupportedException">If SetupCommands() has already been called on this connection</exception>
         public static IDbConnection SetupCommands(this IDbConnection mockConnection)
         {
             if (mockConnection is DbConnectionWrapper)
@@ -27,42 +46,7 @@
 
             var result = new DbConnectionWrapper(mockConnection);
             mockConnection.State.Returns(ConnectionState.Open);
-            mockConnection.CreateCommand()
-                .Returns(
-                    _ =>
-                    {
-                        var mockCommand = Substitute.For<DbCommand>();
-                        var mockParameters = Substitute.For<DbParameterCollection>();
-                        var parameters = new List<DbParameter>();
-
-                        mockParameters.Add(Arg.Any<object>())
-                            .Returns(
-                                ci =>
-                                {
-                                    parameters.Add((DbParameter)ci[0]);
-                                    return parameters.Count - 1;
-                                });
-                        mockParameters.Count.Returns(ci => parameters.Count);
-                        mockParameters.When(x => x.AddRange(Arg.Any<Array>())).Throw<NotSupportedException>();
-                        mockParameters.When(x => x.Clear()).Do(ci => parameters.Clear());
-                        mockParameters.Contains(Arg.Any<object>()).Throws<NotSupportedException>();
-                        mockParameters.Contains(Arg.Any<string>()).Returns(ci => parameters.Any(parameter => parameter.ParameterName == (string)ci[0]));
-                        mockParameters[Arg.Any<int>()].Returns(ci => parameters[(int)ci[0]]);
-                        mockParameters[Arg.Any<string>()].Throws<NotSupportedException>();
-
-                        mockCommand.Parameters.Returns(ci => mockParameters);
-                        mockCommand.CreateParameter().Returns(ci => Substitute.For<DbParameter>());
-
-                        DbDataReader ExecuteReader(CallInfo ci) => result.ExecuteReader(mockCommand);
-                        mockCommand.ExecuteReader().Returns(ExecuteReader);
-                        mockCommand.ExecuteReader(Arg.Any<CommandBehavior>()).Returns(ExecuteReader);
-                        mockCommand.ExecuteReaderAsync().Returns(ExecuteReader);
-                        mockCommand.ExecuteReaderAsync(Arg.Any<CancellationToken>()).Returns(ExecuteReader);
-                        mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>()).Returns(ExecuteReader);
-                        mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>(), Arg.Any<CancellationToken>()).Returns(ExecuteReader);
-                        return mockCommand;
-                    });
-
+            mockConnection.CreateCommand().Returns(_ => CreateMockCommand(result));
             return result;
         }
 
@@ -118,13 +102,47 @@
             return connectionWrapper;
         }
 
-        private class DbConnectionWrapper : IDbConnection
+        private static IDbCommand CreateMockCommand(DbConnectionWrapper result)
+        {
+            var mockCommand = Substitute.For<DbCommand>();
+            var mockParameters = Substitute.For<DbParameterCollection>();
+            var parameters = new List<DbParameter>();
+
+            mockParameters.Add(Arg.Any<object>())
+                .Returns(
+                    ci =>
+                    {
+                        parameters.Add((DbParameter)ci[0]);
+                        return parameters.Count - 1;
+                    });
+            mockParameters.Count.Returns(ci => parameters.Count);
+            mockParameters.When(x => x.AddRange(Arg.Any<Array>())).Throw<NotSupportedException>();
+            mockParameters.When(x => x.Clear()).Do(ci => parameters.Clear());
+            mockParameters.Contains(Arg.Any<object>()).Throws<NotSupportedException>();
+            mockParameters.Contains(Arg.Any<string>()).Returns(ci => parameters.Any(parameter => parameter.ParameterName == (string)ci[0]));
+            mockParameters[Arg.Any<int>()].Returns(ci => parameters[(int)ci[0]]);
+            mockParameters[Arg.Any<string>()].Throws<NotSupportedException>();
+
+            mockCommand.Parameters.Returns(ci => mockParameters);
+            mockCommand.CreateParameter().Returns(ci => Substitute.For<DbParameter>());
+
+            DbDataReader ExecuteReader(CallInfo ci) => result.ExecuteReader(mockCommand);
+            mockCommand.ExecuteReader().Returns(ExecuteReader);
+            mockCommand.ExecuteReader(Arg.Any<CommandBehavior>()).Returns(ExecuteReader);
+            mockCommand.ExecuteReaderAsync().Returns(ExecuteReader);
+            mockCommand.ExecuteReaderAsync(Arg.Any<CancellationToken>()).Returns(ExecuteReader);
+            mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>()).Returns(ExecuteReader);
+            mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>(), Arg.Any<CancellationToken>()).Returns(ExecuteReader);
+            return mockCommand;
+        }
+
+        private class DbConnectionWrapper : DbConnection
         {
             private readonly List<MockQuery> _queries = new List<MockQuery>();
 
             public DbConnectionWrapper(IDbConnection inner) => Inner = inner;
 
-            public string ConnectionString
+            public override string ConnectionString
             {
                 get => Inner.ConnectionString;
                 set => Inner.ConnectionString = value;
@@ -132,25 +150,21 @@
 
             public IDbConnection Inner { get; }
 
-            public int ConnectionTimeout => Inner.ConnectionTimeout;
+            public override int ConnectionTimeout => Inner.ConnectionTimeout;
 
-            public string Database => Inner.Database;
+            public override string Database => Inner.Database;
 
-            public ConnectionState State => Inner.State;
+            public override string DataSource => ((DbConnection)Inner).DataSource;
 
-            public void Dispose() => Inner.Dispose();
+            public override string ServerVersion => ((DbConnection)Inner).ServerVersion;
 
-            public IDbTransaction BeginTransaction() => Inner.BeginTransaction();
+            public override ConnectionState State => Inner.State;
 
-            public IDbTransaction BeginTransaction(IsolationLevel il) => Inner.BeginTransaction();
+            public override void Close() => Inner.Close();
 
-            public void Close() => Inner.Close();
+            public override void ChangeDatabase(string databaseName) => Inner.ChangeDatabase(databaseName);
 
-            public void ChangeDatabase(string databaseName) => Inner.ChangeDatabase(databaseName);
-
-            public IDbCommand CreateCommand() => Inner.CreateCommand();
-
-            public void Open() => Inner.Open();
+            public override void Open() => Inner.Open();
 
             public DbDataReader ExecuteReader(IDbCommand mockCommand)
             {
@@ -181,6 +195,10 @@
                 _queries.Add(query);
                 return query;
             }
+
+            protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel) => (DbTransaction)Inner.BeginTransaction();
+
+            protected override DbCommand CreateDbCommand() => (DbCommand)Inner.CreateCommand();
         }
 
         private class MockQuery : IMockQueryBuilder, IMockQueryResultBuilder
@@ -256,6 +274,7 @@
             public DbDataReader ExecuteReader()
             {
                 var properties = ResultSets.Select(resultSet => resultSet.RowType.GetProperties()).ToList();
+                var propertiesByName = ResultSets.Select(resultSet => resultSet.RowType.GetProperties().ToDictionary(property => property.Name, property => property)).ToList();
 
                 var resultSetIndex = 0;
                 var rowIndex = -1;
@@ -276,6 +295,7 @@
                 SetupRead(mockReader, ci => ++rowIndex < ResultSets[resultSetIndex].Rows.Count);
 
                 mockReader[Arg.Any<int>()].Returns(ci => properties[resultSetIndex][(int)ci[0]].GetValue(ResultSets[resultSetIndex].Rows[rowIndex]));
+                mockReader[Arg.Any<string>()].Returns(ci => propertiesByName[resultSetIndex][(string)ci[0]].GetValue(ResultSets[resultSetIndex].Rows[rowIndex]));
 
                 return mockReader;
             }

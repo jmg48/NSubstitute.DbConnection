@@ -46,11 +46,7 @@ namespace NSubstitute.DbConnection.Dapper.Tests
         {
             var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
             mockConnection.SetupQuery("select * from table")
-                .Returns(
-                    new[]
-                    {
-                        new KeyValueRecord(1, "abc"),
-                    });
+                .Returns(new KeyValueRecord(1, "abc"));
 
             var result = mockConnection.Query<KeyValueRecord>("select * from table").ToList();
 
