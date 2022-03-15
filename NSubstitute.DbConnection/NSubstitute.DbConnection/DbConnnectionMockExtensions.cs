@@ -1,4 +1,4 @@
-﻿namespace NSubstitute.DbConnection
+﻿namespace NSubstitute.Community.DbConnection
 {
     using System;
     using System.Collections.Generic;
@@ -8,6 +8,7 @@
     using System.Text.RegularExpressions;
     using System.Threading;
     using NSubstitute.Core;
+    using NSubstitute.DbConnection;
     using NSubstitute.ExceptionExtensions;
 
     public static class DbConnnectionMockExtensions
@@ -229,17 +230,9 @@
                 return this;
             }
 
-            public IMockQueryResultBuilder ThenReturns<T>(IReadOnlyList<T> results)
-            {
-                ResultSets.Add((typeof(T), results.Cast<object>().ToList()));
-                return this;
-            }
+            public IMockQueryResultBuilder ThenReturns<T>(IReadOnlyList<T> results) => Returns(results);
 
-            public IMockQueryResultBuilder ThenReturns<T>(params T[] results)
-            {
-                ResultSets.Add((typeof(T), results.Cast<object>().ToList()));
-                return this;
-            }
+            public IMockQueryResultBuilder ThenReturns<T>(params T[] results) => Returns(results);
 
             public bool Matches(IDbCommand command)
             {
