@@ -58,12 +58,13 @@
         /// <param name="commandText">The command text to match on</param>
         /// <returns>The query builder</returns>
         /// <exception cref="NotSupportedException">If SetupCommands() has not been called on the connection</exception>
-        public static IMockQueryBuilder SetupQuery(this IDbConnection mockConnection, string commandText)
-        {
-            var connectionWrapper = CheckConnectionSetup(mockConnection);
-
-            return connectionWrapper.AddQuery(commandText);
-        }
+        public static IMockQueryBuilder SetupQuery(this IDbConnection mockConnection, string commandText) =>
+            SetupQuery(
+                mockConnection,
+                queryString => string.Equals(
+                    queryString.Trim(),
+                    commandText.Trim(),
+                    StringComparison.InvariantCultureIgnoreCase));
 
         /// <summary>
         /// Returns a mock query builder which will match the specified regex
@@ -72,12 +73,8 @@
         /// <param name="queryRegex">The regex to match on</param>
         /// <returns>The query builder</returns>
         /// <exception cref="NotSupportedException">If SetupCommands() has not been called on the connection</exception>
-        public static IMockQueryBuilder SetupQuery(this IDbConnection mockConnection, Regex queryRegex)
-        {
-            var connectionWrapper = CheckConnectionSetup(mockConnection);
-
-            return connectionWrapper.AddQuery(queryRegex.IsMatch);
-        }
+        public static IMockQueryBuilder SetupQuery(this IDbConnection mockConnection, Regex queryRegex) =>
+            SetupQuery(mockConnection, queryRegex.IsMatch);
 
         /// <summary>
         /// Returns a mock query builder which will match the specified delegate
@@ -86,22 +83,13 @@
         /// <param name="queryMatcher">The delegate to match on</param>
         /// <returns>The query builder</returns>
         /// <exception cref="NotSupportedException">If SetupCommands() has not been called on the connection</exception>
-        public static IMockQueryBuilder SetupQuery(this IDbConnection mockConnection, Func<string, bool> queryMatcher)
-        {
-            var connectionWrapper = CheckConnectionSetup(mockConnection);
+        public static IMockQueryBuilder SetupQuery(this IDbConnection mockConnection, Func<string, bool> queryMatcher) =>
+            CheckConnectionSetup(mockConnection).AddQuery(queryMatcher);
 
-            return connectionWrapper.AddQuery(queryMatcher);
-        }
-
-        private static DbConnectionWrapper CheckConnectionSetup(IDbConnection mockConnection)
-        {
-            if (!(mockConnection is DbConnectionWrapper connectionWrapper))
-            {
-                throw new NotSupportedException($"{nameof(SetupCommands)} on this connection before setting up queries");
-            }
-
-            return connectionWrapper;
-        }
+        private static DbConnectionWrapper CheckConnectionSetup(IDbConnection mockConnection) =>
+            mockConnection is DbConnectionWrapper connectionWrapper
+                ? connectionWrapper
+                : throw new NotSupportedException($"{nameof(SetupCommands)} on this connection before setting up queries");
 
         private static IDbCommand CreateMockCommand(DbConnectionWrapper result)
         {
@@ -134,178 +122,8 @@
             mockCommand.ExecuteReaderAsync(Arg.Any<CancellationToken>()).Returns(ExecuteReader);
             mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>()).Returns(ExecuteReader);
             mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>(), Arg.Any<CancellationToken>()).Returns(ExecuteReader);
+
             return mockCommand;
-        }
-
-        private class DbConnectionWrapper : DbConnection
-        {
-            private readonly List<MockQuery> _queries = new List<MockQuery>();
-
-            public DbConnectionWrapper(IDbConnection inner) => Inner = inner;
-
-            public override string ConnectionString
-            {
-                get => Inner.ConnectionString;
-                set => Inner.ConnectionString = value;
-            }
-
-            public IDbConnection Inner { get; }
-
-            public override int ConnectionTimeout => Inner.ConnectionTimeout;
-
-            public override string Database => Inner.Database;
-
-            public override string DataSource => ((DbConnection)Inner).DataSource;
-
-            public override string ServerVersion => ((DbConnection)Inner).ServerVersion;
-
-            public override ConnectionState State => Inner.State;
-
-            public override void Close() => Inner.Close();
-
-            public override void ChangeDatabase(string databaseName) => Inner.ChangeDatabase(databaseName);
-
-            public override void Open() => Inner.Open();
-
-            public DbDataReader ExecuteReader(IDbCommand mockCommand)
-            {
-                foreach (var query in _queries)
-                {
-                    if (query.Matches(mockCommand))
-                    {
-                        return query.ExecuteReader();
-                    }
-                }
-
-                throw new NotSupportedException("No matching query found - call SetupQuery to add mocked queries");
-            }
-
-            public IMockQueryBuilder AddQuery(string commandText)
-            {
-                var query = new MockQuery
-                {
-                    CommandTextMatcher = queryString => string.Equals(queryString.Trim(), commandText.Trim(), StringComparison.InvariantCultureIgnoreCase),
-                };
-                _queries.Add(query);
-                return query;
-            }
-
-            public IMockQueryBuilder AddQuery(Func<string, bool> matcher)
-            {
-                var query = new MockQuery { CommandTextMatcher = matcher };
-                _queries.Add(query);
-                return query;
-            }
-
-            protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel) => (DbTransaction)Inner.BeginTransaction();
-
-            protected override DbCommand CreateDbCommand() => (DbCommand)Inner.CreateCommand();
-        }
-
-        private class MockQuery : IMockQueryBuilder, IMockQueryResultBuilder
-        {
-            public Dictionary<string, object> Parameters { get; set; }
-
-            public List<(Type RowType, IReadOnlyList<object> Rows)> ResultSets { get; } = new List<(Type RowType, IReadOnlyList<object> Rows)>();
-
-            public Func<string, bool> CommandTextMatcher { get; set; }
-
-            public IMockQueryBuilder WithNoParameters() => WithParameters(new Dictionary<string, object>());
-
-            public IMockQueryBuilder WithParameters(IReadOnlyDictionary<string, object> parameters)
-            {
-                Parameters = parameters.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                return this;
-            }
-
-            public IMockQueryResultBuilder Returns<T>(IReadOnlyList<T> results)
-            {
-                ResultSets.Add((typeof(T), results.Cast<object>().ToList()));
-                return this;
-            }
-
-            public IMockQueryResultBuilder Returns<T>(params T[] results)
-            {
-                ResultSets.Add((typeof(T), results.Cast<object>().ToList()));
-                return this;
-            }
-
-            public IMockQueryResultBuilder ThenReturns<T>(IReadOnlyList<T> results) => Returns(results);
-
-            public IMockQueryResultBuilder ThenReturns<T>(params T[] results) => Returns(results);
-
-            public bool Matches(IDbCommand command)
-            {
-                if (!CommandTextMatcher(command.CommandText))
-                {
-                    return false;
-                }
-
-                if (Parameters == null)
-                {
-                    return true;
-                }
-
-                if (command.Parameters.Count != Parameters.Count)
-                {
-                    return false;
-                }
-
-                for (var i = 0; i < command.Parameters.Count; i++)
-                {
-                    if (!(command.Parameters[i] is DbParameter parameter) ||
-                        !Parameters.TryGetValue(parameter.ParameterName, out var parameterValue) ||
-                        !Equals(parameterValue, parameter.Value))
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-            public DbDataReader ExecuteReader()
-            {
-                var properties = ResultSets.Select(resultSet => resultSet.RowType.GetProperties()).ToList();
-                var propertiesByName = ResultSets.Select(resultSet => resultSet.RowType.GetProperties().ToDictionary(property => property.Name, property => property)).ToList();
-
-                var resultSetIndex = 0;
-                var rowIndex = -1;
-                var mockReader = Substitute.For<DbDataReader>();
-
-                SetupNextResult(
-                    mockReader,
-                    ci =>
-                    {
-                        rowIndex = -1;
-                        return ++resultSetIndex < ResultSets.Count;
-                    });
-
-                mockReader.FieldCount.Returns(ci => properties[resultSetIndex].Length);
-                mockReader.GetName(Arg.Any<int>()).Returns(ci => properties[resultSetIndex][(int)ci[0]].Name);
-                mockReader.GetFieldType(Arg.Any<int>()).Returns(ci => properties[resultSetIndex][(int)ci[0]].PropertyType);
-
-                SetupRead(mockReader, ci => ++rowIndex < ResultSets[resultSetIndex].Rows.Count);
-
-                mockReader[Arg.Any<int>()].Returns(ci => properties[resultSetIndex][(int)ci[0]].GetValue(ResultSets[resultSetIndex].Rows[rowIndex]));
-                mockReader[Arg.Any<string>()].Returns(ci => propertiesByName[resultSetIndex][(string)ci[0]].GetValue(ResultSets[resultSetIndex].Rows[rowIndex]));
-
-                return mockReader;
-            }
-
-            private static void SetupNextResult(DbDataReader reader, Func<CallInfo, bool> nextResult)
-            {
-                reader.NextResult().Returns(nextResult);
-                reader.NextResultAsync().Returns(nextResult);
-                reader.NextResultAsync(Arg.Any<CancellationToken>()).Returns(nextResult);
-            }
-
-            private static void SetupRead(DbDataReader reader, Func<CallInfo, bool> read)
-            {
-                reader.Read().Returns(read);
-                reader.ReadAsync().Returns(read);
-                reader.ReadAsync(Arg.Any<CancellationToken>()).Returns(read);
-            }
         }
     }
 }
