@@ -21,6 +21,11 @@
 
         public IMockQueryBuilder WithParameter(string name, object value)
         {
+            if (Parameters == null)
+            {
+                Parameters = new Dictionary<string, object>();
+            }
+
             Parameters[name] = value;
             return this;
         }

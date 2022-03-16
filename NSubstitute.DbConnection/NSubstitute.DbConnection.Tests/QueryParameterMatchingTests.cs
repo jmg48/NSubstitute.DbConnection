@@ -45,6 +45,69 @@ public class QueryParameterMatchingTests
     }
 
     [Test]
+    public void ShouldAddSingleParameter()
+    {
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var commandText = "select * from table where id = @id";
+
+        var record = new KeyValueRecord(1, "abc");
+        mockConnection.SetupQuery(commandText)
+            .WithParameter( "id", 1)
+            .Returns(record);
+  
+        var reader = mockConnection.ExecuteReader(
+            command =>
+            {
+                command.CommandText = commandText;
+                command.AddParameter("id", 1);
+            });
+        reader.AssertSingleRecord(record);
+    }
+    
+    [Test]
+    public void ShouldReplaceSingleParameter()
+    {
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var commandText = "select * from table where id = @id";
+
+        var record = new KeyValueRecord(1, "abc");
+        mockConnection.SetupQuery(commandText)
+            .WithParameter( "id", 1)
+            .WithParameter( "id", 2)
+            .Returns(record);
+  
+        var reader = mockConnection.ExecuteReader(
+            command =>
+            {
+                command.CommandText = commandText;
+                command.AddParameter("id", 2);
+            });
+        reader.AssertSingleRecord(record);
+    }
+
+    [Test]
+    public void ShouldAddParametersOneByOne()
+    {
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var commandText = "select * from table where id = @id";
+
+        var record = new KeyValueRecord(1, "abc");
+        mockConnection.SetupQuery(commandText)
+            .WithParameter( "id", 1)
+            .WithParameter( "x", 2)
+            .Returns(record);
+  
+        var reader = mockConnection.ExecuteReader(
+            command =>
+            {
+                command.CommandText = commandText;
+                command.AddParameter("id", 1);
+                command.AddParameter("x", 2);
+            });
+        reader.AssertSingleRecord(record);
+    }
+
+    [Test]
     public void ShouldFailWhenQueryParametersDoNotMatch()
     {
         var mockConnection = Substitute.For<IDbConnection>().SetupCommands();

@@ -11,6 +11,14 @@
         IMockQueryBuilder WithNoParameters();
 
         /// <summary>
+        /// Adds a parameter for the query to match on
+        /// </summary>
+        /// <param name="name">The parameter name</param>
+        /// <param name="value">The parameter value</param>
+        /// <returns>The query builder</returns>
+        IMockQueryBuilder WithParameter(string name, object value);
+
+        /// <summary>
         /// Specifies that the query will only match if the given parameters are passed
         /// </summary>
         /// <param name="parameters">The parameters to match on</param>
