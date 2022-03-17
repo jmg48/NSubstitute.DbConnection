@@ -5,7 +5,6 @@
     using System.Data;
     using System.Data.Common;
     using System.Linq;
-    using NSubstitute.DbConnection;
 
     internal class DbConnectionWrapper : DbConnection
     {

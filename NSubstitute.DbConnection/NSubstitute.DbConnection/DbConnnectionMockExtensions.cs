@@ -8,7 +8,6 @@
     using System.Text.RegularExpressions;
     using System.Threading;
     using NSubstitute.Core;
-    using NSubstitute.DbConnection;
     using NSubstitute.ExceptionExtensions;
 
     public static class DbConnnectionMockExtensions

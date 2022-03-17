@@ -1,4 +1,4 @@
-﻿namespace NSubstitute.DbConnection
+﻿namespace NSubstitute.Community.DbConnection
 {
     using System.Collections.Generic;
 

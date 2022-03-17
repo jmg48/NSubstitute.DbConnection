@@ -9,7 +9,7 @@ namespace NSubstitute.DbConnection.Tests;
 
 public class QueryParameterMatchingTests
 {
-    private static readonly string noMatchingQueryErrorMessage = "No matching query found - call SetupQuery to add mocked queries";
+    private static readonly string NoMatchingQueryErrorMessage = "No matching query found - call SetupQuery to add mocked queries";
 
     [Test]
     public void ShouldMockParameterisedQuery()
@@ -108,6 +108,50 @@ public class QueryParameterMatchingTests
     }
 
     [Test]
+    public void ShouldAddParameterAsTuple()
+    {
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var commandText = "select * from table where id = @id";
+
+        var record = new KeyValueRecord(1, "abc");
+        mockConnection.SetupQuery(commandText)
+            .WithParameters(("id", 1))
+            .Returns(record);
+  
+        var reader = mockConnection.ExecuteReader(
+            command =>
+            {
+                command.CommandText = commandText;
+                command.AddParameter("id", 1);
+            });
+        reader.AssertSingleRecord(record);
+
+    }
+
+    [Test]
+    public void ShouldAddParametersAsTuples()
+    {
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var commandText = "select * from table where id = @id";
+
+        var record = new KeyValueRecord(1, "abc");
+        mockConnection.SetupQuery(commandText)
+            .WithParameters(
+                ("id", 1),
+                ("x", 2))
+            .Returns(record);
+  
+        var reader = mockConnection.ExecuteReader(
+            command =>
+            {
+                command.CommandText = commandText;
+                command.AddParameter("id", 1);
+                command.AddParameter("x", 2);
+            });
+        reader.AssertSingleRecord(record);
+    }
+
+    [Test]
     public void ShouldFailWhenQueryParametersDoNotMatch()
     {
         var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
@@ -118,7 +162,7 @@ public class QueryParameterMatchingTests
             .Returns(record);
 
         var resultNoParameters = () => mockConnection.ExecuteReader(command => command.CommandText = commandText);
-        resultNoParameters.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
+        resultNoParameters.Should().Throw<NotSupportedException>().WithMessage(NoMatchingQueryErrorMessage);
 
         var resultWrongParameterName = () => mockConnection.ExecuteReader(
             command =>
@@ -126,7 +170,7 @@ public class QueryParameterMatchingTests
             command.CommandText = commandText;
             command.AddParameter("x", 1);
         });
-        resultWrongParameterName.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
+        resultWrongParameterName.Should().Throw<NotSupportedException>().WithMessage(NoMatchingQueryErrorMessage);
 
         var resultWrongParameterValue = () => mockConnection.ExecuteReader(
             command =>
@@ -134,7 +178,7 @@ public class QueryParameterMatchingTests
             command.CommandText = commandText;
             command.AddParameter("id", 2);
         });
-        resultWrongParameterValue.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
+        resultWrongParameterValue.Should().Throw<NotSupportedException>().WithMessage(NoMatchingQueryErrorMessage);
 
         var resultExtraParameter = () => mockConnection.ExecuteReader(
             command =>
@@ -143,7 +187,7 @@ public class QueryParameterMatchingTests
             command.AddParameter("id", 1);
             command.AddParameter("x", 2);
         });
-        resultExtraParameter.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
+        resultExtraParameter.Should().Throw<NotSupportedException>().WithMessage(NoMatchingQueryErrorMessage);
     }
 
 
@@ -184,6 +228,6 @@ public class QueryParameterMatchingTests
             command.CommandText = commandText;
             command.AddParameter("id", 1);
         });
-        result.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
+        result.Should().Throw<NotSupportedException>().WithMessage(NoMatchingQueryErrorMessage);
     }
 }

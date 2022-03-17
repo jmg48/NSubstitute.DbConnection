@@ -1,4 +1,4 @@
-﻿namespace NSubstitute.DbConnection
+﻿namespace NSubstitute.Community.DbConnection
 {
     using System.Collections.Generic;
 
@@ -24,6 +24,13 @@
         /// <param name="parameters">The parameters to match on</param>
         /// <returns>The query builder</returns>
         IMockQueryBuilder WithParameters(IReadOnlyDictionary<string, object> parameters);
+
+        /// <summary>
+        /// Specifies that the query will only match if the given parameters are passed
+        /// </summary>
+        /// <param name="parameters">The parameters to match on</param>
+        /// <returns>The query builder</returns>
+        IMockQueryBuilder WithParameters(params (string Key, object Value)[] parameters);
 
         /// <summary>
         /// Specifies the first result set that the query will return.

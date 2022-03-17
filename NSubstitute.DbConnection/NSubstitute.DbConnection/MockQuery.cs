@@ -7,7 +7,6 @@
     using System.Linq;
     using System.Threading;
     using NSubstitute.Core;
-    using NSubstitute.DbConnection;
 
     internal class MockQuery : IMockQueryBuilder, IMockQueryResultBuilder
     {
@@ -31,6 +30,12 @@
         }
 
         public IMockQueryBuilder WithParameters(IReadOnlyDictionary<string, object> parameters)
+        {
+            Parameters = parameters.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            return this;
+        }
+
+        public IMockQueryBuilder WithParameters(params (string Key, object Value)[] parameters)
         {
             Parameters = parameters.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
             return this;
