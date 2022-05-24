@@ -1,6 +1,8 @@
 ﻿namespace NSubstitute.Community.DbConnection
 {
+    using System;
     using System.Collections.Generic;
+    using NSubstitute.Core;
 
     public interface IMockQueryBuilder
     {
@@ -47,5 +49,7 @@
         /// <param name="results">The result set</param>
         /// <returns>The result builder</returns>
         IMockQueryResultBuilder Returns<T>(params T[] results);
+
+        IMockQueryResultBuilder ReturnsFunc(Func<CallInfo, object> resultDelegate);
     }
 }

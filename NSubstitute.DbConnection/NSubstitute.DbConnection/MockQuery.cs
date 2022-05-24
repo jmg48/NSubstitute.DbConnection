@@ -5,6 +5,7 @@
     using System.Data;
     using System.Data.Common;
     using System.Linq;
+    using System.Reflection;
     using System.Threading;
     using NSubstitute.Core;
 
@@ -13,6 +14,8 @@
         public Dictionary<string, object> Parameters { get; set; }
 
         public List<(Type RowType, IReadOnlyList<object> Rows)> ResultSets { get; } = new List<(Type RowType, IReadOnlyList<object> Rows)>();
+
+        public List<Func<CallInfo, object>> ResultSetFuncs { get; } = new List<Func<CallInfo, object>>();
 
         public Func<string, bool> CommandTextMatcher { get; set; }
 
@@ -50,6 +53,12 @@
         public IMockQueryResultBuilder Returns<T>(params T[] results)
         {
             ResultSets.Add((typeof(T), results.Cast<object>().ToList()));
+            return this;
+        }
+
+        public IMockQueryResultBuilder ReturnsFunc(Func<CallInfo, object> matcher)
+        {
+            ResultSetFuncs.Add(matcher);
             return this;
         }
 
@@ -97,23 +106,77 @@
             var resultSetIndex = 0;
             var rowIndex = -1;
             var mockReader = Substitute.For<DbDataReader>();
+            Func<CallInfo, bool> nextResult;
 
-            SetupNextResult(
-                mockReader,
-                ci =>
+            bool funcResult = false;
+            if (properties.Count == 0 && propertiesByName.Count == 0 && ResultSetFuncs.Count != 0)
+            {
+                // Try function based mock return values
+                properties = ResultSetFuncs.Select(func => func.GetMethodInfo().ReturnType.GetProperties()).ToList();
+                propertiesByName = ResultSetFuncs
+                    .Select(func => func.GetMethodInfo().ReturnType.GetProperties().ToDictionary(property => property.Name, property => property))
+                    .ToList();
+
+                funcResult = true;
+            }
+
+            if (funcResult)
+            {
+                nextResult = ci =>
+                {
+                    rowIndex = -1;
+                    return ++resultSetIndex < ResultSetFuncs.Count;
+                };
+            }
+            else
+            {
+                nextResult = ci =>
                 {
                     rowIndex = -1;
                     return ++resultSetIndex < ResultSets.Count;
-                });
+                };
+            }
+
+            SetupNextResult(mockReader, nextResult);
 
             mockReader.FieldCount.Returns(ci => properties[resultSetIndex].Length);
             mockReader.GetName(Arg.Any<int>()).Returns(ci => properties[resultSetIndex][(int)ci[0]].Name);
             mockReader.GetFieldType(Arg.Any<int>()).Returns(ci => properties[resultSetIndex][(int)ci[0]].PropertyType);
 
-            SetupRead(mockReader, ci => ++rowIndex < ResultSets[resultSetIndex].Rows.Count);
+            if (funcResult)
+            {
+                object[] results = new object[ResultSetFuncs.Count];
+                object[][] resultsByIndex = new object[ResultSetFuncs.Count][];
+                object[][] resultsByName = new object[ResultSetFuncs.Count][];
+                Func<Func<CallInfo, object>, int, CallInfo, List<object>> di = (func, index, ci) =>
+                {
+                    Console.Out.WriteLine(ci);
+                    if (results[index] == null)
+                    {
+                        var resultsList = new List<object>();
+                        var thisResult = func.DynamicInvoke(ci);
+                        resultsList.Add(thisResult);
+                        results[index] = resultsList;
+                    }
 
-            mockReader[Arg.Any<int>()].Returns(ci => properties[resultSetIndex][(int)ci[0]].GetValue(ResultSets[resultSetIndex].Rows[rowIndex]));
-            mockReader[Arg.Any<string>()].Returns(ci => propertiesByName[resultSetIndex][(string)ci[0]].GetValue(ResultSets[resultSetIndex].Rows[rowIndex]));
+                    return (List<object>)results[index];
+                };
+
+                SetupRead(mockReader, ci => ++rowIndex < di(ResultSetFuncs[resultSetIndex], resultSetIndex, ci).Count);
+
+                mockReader[Arg.Any<int>()].Returns(ci =>
+                    properties[resultSetIndex][(int)ci[0]].GetValue(((List<object>)results[resultSetIndex])[rowIndex]));
+                mockReader[Arg.Any<string>()].Returns(ci =>
+                    propertiesByName[resultSetIndex][(string)ci[0]].GetValue(((List<object>)results[resultSetIndex])[rowIndex]));
+            }
+            else
+            {
+                SetupRead(mockReader, ci => ++rowIndex < ResultSets[resultSetIndex].Rows.Count);
+                mockReader[Arg.Any<int>()].Returns(ci =>
+                    properties[resultSetIndex][(int)ci[0]].GetValue(ResultSets[resultSetIndex].Rows[rowIndex]));
+                mockReader[Arg.Any<string>()].Returns(ci =>
+                    propertiesByName[resultSetIndex][(string)ci[0]].GetValue(ResultSets[resultSetIndex].Rows[rowIndex]));
+            }
 
             return mockReader;
         }

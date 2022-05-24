@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Text.RegularExpressions;
 using FluentAssertions;
 using NSubstitute.Community.DbConnection;
+using NSubstitute.Core;
 using NUnit.Framework;
 
 namespace NSubstitute.DbConnection.Tests;
@@ -46,5 +48,31 @@ public class QueryTextMatchingTests
 
         var reader = mockConnection.ExecuteReader(command => command.CommandText = "select id, foo,bar from table where id = @id");
         reader.AssertSingleRecord(record);
+    }
+
+
+
+    [Test]
+    public void Anton()
+    {
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        object argsCapture = null;
+        var record = new KeyValueRecord(1, "abc");
+        Func<CallInfo, KeyValueRecord> temp = args =>
+        {
+            argsCapture = args.Args();
+            return record;
+        };
+        mockConnection.SetupQuery("exec stored_proc_abc")
+            .WithParameters(new Dictionary<string, object> { { "id", 1 } })
+            .ReturnsFunc(temp);
+
+        var reader = mockConnection.ExecuteReader(command =>
+        {
+            command.CommandText = "exec stored_proc_abc";
+            command.AddParameter("id", 1);
+        });
+        reader.AssertSingleRecord(record);
+        // argsCapture.Should().BeEquivalentTo(new[] { "id", "1" });
     }
 }
