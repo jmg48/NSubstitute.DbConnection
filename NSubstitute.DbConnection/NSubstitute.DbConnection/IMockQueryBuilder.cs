@@ -1,5 +1,6 @@
 ﻿namespace NSubstitute.Community.DbConnection
 {
+    using System;
     using System.Collections.Generic;
 
     public interface IMockQueryBuilder
@@ -38,7 +39,7 @@
         /// <typeparam name="T">The type of the result</typeparam>
         /// <param name="results">The result set</param>
         /// <returns>The result builder</returns>
-        IMockQueryResultBuilder Returns<T>(IReadOnlyList<T> results);
+        IMockQueryResultBuilder Returns<T>(IEnumerable<T> results);
 
         /// <summary>
         /// Specifies the first result set that the query will return.
@@ -47,5 +48,13 @@
         /// <param name="results">The result set</param>
         /// <returns>The result builder</returns>
         IMockQueryResultBuilder Returns<T>(params T[] results);
+
+        /// <summary>
+        /// Specifies the first result set that the query will return.
+        /// </summary>
+        /// <typeparam name="T">The type of the result</typeparam>
+        /// <param name="resultSelector">Returns the result set</param>
+        /// <returns>The result builder</returns>
+        IMockQueryResultBuilder Returns<T>(Func<QueryInfo, IEnumerable<T>> resultSelector);
     }
 }

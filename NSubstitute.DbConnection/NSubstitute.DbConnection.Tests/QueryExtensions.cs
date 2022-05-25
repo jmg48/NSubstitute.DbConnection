@@ -33,7 +33,7 @@ public static class QueryExtensions
         reader.NextResult().Should().BeFalse();
     }
 
-    public static void AddParameter(this IDbCommand command, string name, int value)
+    public static void AddParameter<T>(this IDbCommand command, string name, T value)
     {
         var parameter = command.CreateParameter();
         parameter.ParameterName = name;

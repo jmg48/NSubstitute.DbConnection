@@ -12,7 +12,7 @@
     {
         public Dictionary<string, object> Parameters { get; set; }
 
-        public List<(Type RowType, IReadOnlyList<object> Rows)> ResultSets { get; } = new List<(Type RowType, IReadOnlyList<object> Rows)>();
+        public List<(Type RowType, Func<QueryInfo, IReadOnlyList<object>> Rows)> ResultSelectors { get; } = new List<(Type RowType, Func<QueryInfo, IReadOnlyList<object>> Rows)>();
 
         public Func<string, bool> CommandTextMatcher { get; set; }
 
@@ -41,21 +41,29 @@
             return this;
         }
 
-        public IMockQueryResultBuilder Returns<T>(IReadOnlyList<T> results)
+        public IMockQueryResultBuilder Returns<T>(IEnumerable<T> results)
         {
-            ResultSets.Add((typeof(T), results.Cast<object>().ToList()));
+            ResultSelectors.Add((typeof(T), _ => results.Cast<object>().ToList()));
             return this;
         }
 
         public IMockQueryResultBuilder Returns<T>(params T[] results)
         {
-            ResultSets.Add((typeof(T), results.Cast<object>().ToList()));
+            ResultSelectors.Add((typeof(T), _ => results.Cast<object>().ToList()));
             return this;
         }
 
-        public IMockQueryResultBuilder ThenReturns<T>(IReadOnlyList<T> results) => Returns(results);
+        public IMockQueryResultBuilder Returns<T>(Func<QueryInfo, IEnumerable<T>> resultSelector)
+        {
+            ResultSelectors.Add((typeof(T), qi => resultSelector(qi).Cast<object>().ToList()));
+            return this;
+        }
+
+        public IMockQueryResultBuilder ThenReturns<T>(IEnumerable<T> results) => Returns(results);
 
         public IMockQueryResultBuilder ThenReturns<T>(params T[] results) => Returns(results);
+
+        public IMockQueryResultBuilder ThenReturns<T>(Func<QueryInfo, IEnumerable<T>> resultSelector) => Returns(resultSelector);
 
         public bool Matches(IDbCommand command)
         {
@@ -87,10 +95,26 @@
             return true;
         }
 
-        public DbDataReader ExecuteReader()
+        public DbDataReader ExecuteReader(IDbCommand mockCommand)
         {
-            var properties = ResultSets.Select(resultSet => resultSet.RowType.GetProperties()).ToList();
-            var propertiesByName = ResultSets
+            var parameters = new Dictionary<string, object>();
+            for (var i = 0; i < mockCommand.Parameters.Count; i++)
+            {
+                var parameter = mockCommand.Parameters[i];
+                if (parameter is DbParameter dbParameter)
+                {
+                    parameters.Add(dbParameter.ParameterName, dbParameter.Value);
+                }
+            }
+
+            var queryInfo = new QueryInfo
+            {
+                QueryText = mockCommand.CommandText,
+                Parameters = parameters,
+            };
+
+            var properties = ResultSelectors.Select(resultSet => resultSet.RowType.GetProperties()).ToList();
+            var propertiesByName = ResultSelectors
                 .Select(resultSet => resultSet.RowType.GetProperties().ToDictionary(property => property.Name, property => property))
                 .ToList();
 
@@ -98,22 +122,30 @@
             var rowIndex = -1;
             var mockReader = Substitute.For<DbDataReader>();
 
+            var resultSets = new List<IReadOnlyList<object>> { ResultSelectors[0].Rows(queryInfo) };
             SetupNextResult(
                 mockReader,
                 ci =>
                 {
                     rowIndex = -1;
-                    return ++resultSetIndex < ResultSets.Count;
+                    resultSetIndex++;
+                    if (resultSetIndex >= ResultSelectors.Count)
+                    {
+                        return false;
+                    }
+
+                    resultSets.Add(ResultSelectors[resultSetIndex].Rows(queryInfo));
+                    return true;
                 });
 
             mockReader.FieldCount.Returns(ci => properties[resultSetIndex].Length);
             mockReader.GetName(Arg.Any<int>()).Returns(ci => properties[resultSetIndex][(int)ci[0]].Name);
             mockReader.GetFieldType(Arg.Any<int>()).Returns(ci => properties[resultSetIndex][(int)ci[0]].PropertyType);
 
-            SetupRead(mockReader, ci => ++rowIndex < ResultSets[resultSetIndex].Rows.Count);
+            SetupRead(mockReader, ci => ++rowIndex < resultSets[resultSetIndex].Count);
 
-            mockReader[Arg.Any<int>()].Returns(ci => properties[resultSetIndex][(int)ci[0]].GetValue(ResultSets[resultSetIndex].Rows[rowIndex]));
-            mockReader[Arg.Any<string>()].Returns(ci => propertiesByName[resultSetIndex][(string)ci[0]].GetValue(ResultSets[resultSetIndex].Rows[rowIndex]));
+            mockReader[Arg.Any<int>()].Returns(ci => properties[resultSetIndex][(int)ci[0]].GetValue(resultSets[resultSetIndex][rowIndex]));
+            mockReader[Arg.Any<string>()].Returns(ci => propertiesByName[resultSetIndex][(string)ci[0]].GetValue(resultSets[resultSetIndex][rowIndex]));
 
             return mockReader;
         }

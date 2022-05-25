@@ -36,7 +36,7 @@
         public override void Open() => _inner.Open();
 
         public DbDataReader ExecuteReader(IDbCommand mockCommand) =>
-            _queries.FirstOrDefault(query => query.Matches(mockCommand))?.ExecuteReader() ??
+            _queries.FirstOrDefault(query => query.Matches(mockCommand))?.ExecuteReader(mockCommand) ??
             throw new NotSupportedException("No matching query found - call SetupQuery to add mocked queries");
 
         public IMockQueryBuilder AddQuery(Func<string, bool> matcher)
