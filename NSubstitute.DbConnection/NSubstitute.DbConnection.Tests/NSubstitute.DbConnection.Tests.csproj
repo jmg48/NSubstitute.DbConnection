@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NSubstitute.DbConnection\NSubstitute.Community.DbConnection.csproj" />
+    <ProjectReference Include="..\NSubstitute.DbConnection\NSubstitute.DbConnection.csproj" />
   </ItemGroup>
 
 </Project>

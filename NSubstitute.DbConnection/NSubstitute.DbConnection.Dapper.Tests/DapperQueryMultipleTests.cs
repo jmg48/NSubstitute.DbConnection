@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using FluentAssertions;
-using NSubstitute.Community.DbConnection;
 using NUnit.Framework;
 
 namespace NSubstitute.DbConnection.Dapper.Tests;

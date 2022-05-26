@@ -2,7 +2,7 @@ using System.Data;
 using System.Linq;
 using Dapper;
 using FluentAssertions;
-using NSubstitute.Community.DbConnection;
+using NSubstitute.DbConnection;
 using NUnit.Framework;
 
 namespace NSubstitute.DbConnection.Dapper.Tests;

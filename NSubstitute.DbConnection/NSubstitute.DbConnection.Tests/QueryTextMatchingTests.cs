@@ -2,7 +2,6 @@ using System;
 using System.Data;
 using System.Text.RegularExpressions;
 using FluentAssertions;
-using NSubstitute.Community.DbConnection;
 using NUnit.Framework;
 
 namespace NSubstitute.DbConnection.Tests;
