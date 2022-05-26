@@ -54,7 +54,19 @@
         /// </summary>
         /// <typeparam name="T">The type of the result</typeparam>
         /// <param name="resultSelector">Returns the result set</param>
-        /// <returns>The result builder</returns>
+        /// <returns>The result selector</returns>
         IMockQueryResultBuilder Returns<T>(Func<QueryInfo, IEnumerable<T>> resultSelector);
+
+        /// <summary>
+        /// Specifies the number of rows affected by the query
+        /// </summary>
+        /// <param name="rowCount">The row count</param>
+        void Affects(int rowCount);
+
+        /// <summary>
+        /// Specifies the number of rows affected by the query
+        /// </summary>
+        /// <param name="rowCountSelector">Returns the row count</param>
+        void Affects(Func<QueryInfo, int> rowCountSelector);
     }
 }

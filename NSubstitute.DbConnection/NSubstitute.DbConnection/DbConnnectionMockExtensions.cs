@@ -122,6 +122,12 @@
             mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>()).Returns(ExecuteReader);
             mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>(), Arg.Any<CancellationToken>()).Returns(ExecuteReader);
 
+            int ExecuteNonQuery(CallInfo ci) => result.ExecuteNonQuery(mockCommand);
+
+            mockCommand.ExecuteNonQuery().Returns(ExecuteNonQuery);
+            mockCommand.ExecuteNonQueryAsync().Returns(ExecuteNonQuery);
+            mockCommand.ExecuteNonQueryAsync(Arg.Any<CancellationToken>()).Returns(ExecuteNonQuery);
+
             return mockCommand;
         }
     }

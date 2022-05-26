@@ -16,6 +16,8 @@
 
         public Func<string, bool> CommandTextMatcher { get; set; }
 
+        public Func<QueryInfo, int> RowCountSelector { get; set; }
+
         public IMockQueryBuilder WithNoParameters() => WithParameters(new Dictionary<string, object>());
 
         public IMockQueryBuilder WithParameter(string name, object value)
@@ -65,6 +67,10 @@
 
         public IMockQueryResultBuilder ThenReturns<T>(Func<QueryInfo, IEnumerable<T>> resultSelector) => Returns(resultSelector);
 
+        public void Affects(int rowCount) => RowCountSelector = _ => rowCount;
+
+        public void Affects(Func<QueryInfo, int> rowCountSelector) => RowCountSelector = rowCountSelector;
+
         public bool Matches(IDbCommand command)
         {
             if (!CommandTextMatcher(command.CommandText))
@@ -97,21 +103,7 @@
 
         public DbDataReader ExecuteReader(IDbCommand mockCommand)
         {
-            var parameters = new Dictionary<string, object>();
-            for (var i = 0; i < mockCommand.Parameters.Count; i++)
-            {
-                var parameter = mockCommand.Parameters[i];
-                if (parameter is DbParameter dbParameter)
-                {
-                    parameters.Add(dbParameter.ParameterName, dbParameter.Value);
-                }
-            }
-
-            var queryInfo = new QueryInfo
-            {
-                QueryText = mockCommand.CommandText,
-                Parameters = parameters,
-            };
+            var queryInfo = GetQueryInfo(mockCommand);
 
             var properties = ResultSelectors.Select(resultSet => resultSet.RowType.GetProperties()).ToList();
             var propertiesByName = ResultSelectors
@@ -150,6 +142,12 @@
             return mockReader;
         }
 
+        public int ExecuteNonQuery(IDbCommand mockCommand)
+        {
+            var queryInfo = GetQueryInfo(mockCommand);
+            return RowCountSelector?.Invoke(queryInfo) ?? ResultSelectors.SelectMany(resultSelector => resultSelector.Rows(queryInfo)).Count();
+        }
+
         private static void SetupNextResult(DbDataReader reader, Func<CallInfo, bool> nextResult)
         {
             reader.NextResult().Returns(nextResult);
@@ -162,6 +160,26 @@
             reader.Read().Returns(read);
             reader.ReadAsync().Returns(read);
             reader.ReadAsync(Arg.Any<CancellationToken>()).Returns(read);
+        }
+
+        private static QueryInfo GetQueryInfo(IDbCommand mockCommand)
+        {
+            var parameters = new Dictionary<string, object>();
+            for (var i = 0; i < mockCommand.Parameters.Count; i++)
+            {
+                var parameter = mockCommand.Parameters[i];
+                if (parameter is DbParameter dbParameter)
+                {
+                    parameters.Add(dbParameter.ParameterName, dbParameter.Value);
+                }
+            }
+
+            var queryInfo = new QueryInfo
+            {
+                QueryText = mockCommand.CommandText,
+                Parameters = parameters,
+            };
+            return queryInfo;
         }
     }
 }

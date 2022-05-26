@@ -35,9 +35,9 @@
 
         public override void Open() => _inner.Open();
 
-        public DbDataReader ExecuteReader(IDbCommand mockCommand) =>
-            _queries.FirstOrDefault(query => query.Matches(mockCommand))?.ExecuteReader(mockCommand) ??
-            throw new NotSupportedException("No matching query found - call SetupQuery to add mocked queries");
+        public DbDataReader ExecuteReader(IDbCommand mockCommand) => GetMatchingQuery(mockCommand).ExecuteReader(mockCommand);
+
+        public int ExecuteNonQuery(IDbCommand mockCommand) => GetMatchingQuery(mockCommand).ExecuteNonQuery(mockCommand);
 
         public IMockQueryBuilder AddQuery(Func<string, bool> matcher)
         {
@@ -49,5 +49,9 @@
         protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel) => (DbTransaction)_inner.BeginTransaction();
 
         protected override DbCommand CreateDbCommand() => (DbCommand)_inner.CreateCommand();
+
+        private MockQuery GetMatchingQuery(IDbCommand mockCommand) =>
+            _queries.FirstOrDefault(query => query.Matches(mockCommand)) ??
+            throw new NotSupportedException("No matching query found - call SetupQuery to add mocked queries");
     }
 }
