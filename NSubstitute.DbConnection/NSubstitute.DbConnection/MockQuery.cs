@@ -92,7 +92,7 @@
             {
                 if (!(command.Parameters[i] is DbParameter parameter) ||
                     !Parameters.TryGetValue(parameter.ParameterName, out var parameterValue) ||
-                    !Equals(parameterValue, parameter.Value))
+                    !DbEquals(parameterValue, parameter))
                 {
                     return false;
                 }
@@ -146,6 +146,16 @@
         {
             var queryInfo = GetQueryInfo(mockCommand);
             return RowCountSelector?.Invoke(queryInfo) ?? ResultSelectors.SelectMany(resultSelector => resultSelector.Rows(queryInfo)).Count();
+        }
+
+        private static bool DbEquals(object parameterValue, DbParameter parameter)
+        {
+            if (parameterValue == null && parameter.Value is DBNull)
+            {
+                return true;
+            }
+
+            return Equals(parameterValue, parameter.Value);
         }
 
         private static void SetupNextResult(DbDataReader reader, Func<CallInfo, bool> nextResult)

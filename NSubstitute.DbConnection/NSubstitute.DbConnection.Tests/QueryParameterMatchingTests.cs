@@ -85,6 +85,26 @@ public class QueryParameterMatchingTests
     }
 
     [Test]
+    public void ShouldReplaceSingleNullParameterValue()
+    {
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var commandText = "select * from table where value = @id";
+
+        var record = new KeyValueRecord(1, null);
+        mockConnection.SetupQuery(commandText)
+            .WithParameter("value", null)
+            .Returns(record);
+
+        var reader = mockConnection.ExecuteReader(
+            command =>
+            {
+                command.CommandText = commandText;
+                command.AddParameter("value", DBNull.Value);
+            });
+        reader.AssertSingleRecord(record);
+    }
+
+    [Test]
     public void ShouldAddParametersOneByOne()
     {
         var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
