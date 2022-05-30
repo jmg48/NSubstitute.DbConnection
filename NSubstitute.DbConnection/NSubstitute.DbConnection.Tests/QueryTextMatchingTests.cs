@@ -20,7 +20,7 @@ public class QueryTextMatchingTests
             .Returns(record);
 
         var resultWrongSql = () => mockConnection.ExecuteReader(command => command.CommandText = "select * from anotherTable");
-        resultWrongSql.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage);
+        resultWrongSql.Should().Throw<NotSupportedException>().WithMessage(noMatchingQueryErrorMessage+": 'select * from anotherTable'");
     }
 
     [Test]
