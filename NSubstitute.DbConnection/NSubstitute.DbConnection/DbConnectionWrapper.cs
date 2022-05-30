@@ -52,6 +52,6 @@
 
         private MockQuery GetMatchingQuery(IDbCommand mockCommand) =>
             _queries.FirstOrDefault(query => query.Matches(mockCommand)) ??
-            throw new NotSupportedException("No matching query found - call SetupQuery to add mocked queries");
+            throw new NotSupportedException($"No matching query found - call SetupQuery to add mocked queries: '{mockCommand.CommandText}'");
     }
 }
