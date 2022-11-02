@@ -2,9 +2,17 @@
 
 A powerful and flexible extension to NSubstitute for mocking database queries
 
+If there's anything you need to do that's not covered below then raise an [Issue](https://github.com/jmg48/NSubstitute.DbConnection/issues) and we'll see about adding it!
+
+## Installation
+
+The package is available from nuget.org as [NSubstitute.Community.DbConnection](https://www.nuget.org/packages/NSubstitute.Community.DbConnection)
+
+Or, you can run `install-package NSubstitute.Community.DbConnection` from within your IDE
+
 ## Getting started
 
-Create a mock connection by calling `.SetupCommands()` on a regular NSubstitute `IDbConnection` mock:
+To get started, create a mock connection by calling `.SetupCommands()` on a regular NSubstitute `IDbConnection` mock:
 
 ```
     var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
@@ -14,6 +22,10 @@ or, if you want async support, use `DbConnection` instead of `IDbConnection` - e
 ```
     var mockConnection = Substitute.For<DbConnection>().SetupCommands();
 ```
+
+You can then fluently add behaviour to your mock connection using the `.SetupQuery()` methods below, starting with some relative "greedy" matching by default, simply on the query text passed in, but with the ability to match parameter values if you need and also match parts of the query text.
+
+You can define single or multiple result sets, using anonymous types or concrete types, including record types.
 
 ## Set up a simple query
 
