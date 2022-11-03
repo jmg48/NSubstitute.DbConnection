@@ -72,7 +72,7 @@
         public void Affects(Func<QueryInfo, int> rowCountSelector) => RowCountSelector = rowCountSelector;
 
         public void Throws<T>(T exception)
-            where T : Exception => ResultSelectors.Add((typeof(T), _ => { throw exception; }));
+            where T : Exception => ResultSelectors.Add((typeof(T), _ => throw exception));
 
         public bool Matches(IDbCommand command)
         {
