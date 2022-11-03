@@ -167,6 +167,15 @@ Use `.ThenReturns()` to set up second and subsequent result sets for your query:
     reader["Wheat"].Should().Be(4);
 ```
 
+## Throws an exception
+
+Use `.Throws()` to simulate the scenario when an exception is expected.
+
+```
+    mockConnection.SetupQuery("delete from TableWithTriggerPreventDelete")
+        .Throws(new Exception());
+```
+
 ## Further examples
 
 Check out the test fixtures in `NSubstitute.DbConnection.Tests` and `NSubstitute.DbConnection.Dapper.Tests` for working examples of the full set of supported functionality.
