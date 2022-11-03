@@ -68,5 +68,14 @@
         /// </summary>
         /// <param name="rowCountSelector">Returns the row count</param>
         void Affects(Func<QueryInfo, int> rowCountSelector);
+
+        /// <summary>
+        /// Specifies the exception that the query will throw
+        /// </summary>
+        /// <typeparam name="T">The type of the exception. Should be a derived type of <see cref="Exception"/></typeparam>
+        /// <typeparam name="exception">The exception</typeparam>
+        /// <returns>The result builder</returns>
+        void Throws<T>(T exception)
+            where T : Exception;
     }
 }

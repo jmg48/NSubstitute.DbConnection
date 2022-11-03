@@ -72,4 +72,42 @@ public class NonQueryTests
 
         command.ExecuteNonQuery().Should().Be(rowCount);
     }
+
+    [Test]
+    public void ShouldThrow()
+    {
+        var mockConnection = Substitute.For<DbConnection>().SetupCommands();
+        var expectedException = new Exception();
+        mockConnection.SetupQuery("delete from table")
+            .Throws(expectedException);
+
+        using var command = mockConnection.CreateCommand();
+        command.CommandText = "delete from table";
+        mockConnection.Open();
+
+        var act = () => command.ExecuteNonQuery();
+        act.Should().Throw<Exception>().And.Should().Be(expectedException);
+    }
+
+    [TestCase(0)]
+    [TestCase(1)]
+    [TestCase(2)]
+    [TestCase(4)]
+    [TestCase(8)]
+    public void ShouldThrowDependOnParameters(int id)
+    {
+        var mockConnection = Substitute.For<DbConnection>().SetupCommands();
+        var expectedException = new Exception($"failed to delete record with {id}");
+        mockConnection.SetupQuery("delete from table where id=@id")
+            .WithParameter("id", id)
+            .Throws(expectedException);
+
+        using var command = mockConnection.CreateCommand();
+        command.CommandText = "delete from table where id=@id";
+        command.AddParameter("id", id);
+        mockConnection.Open();
+
+        var act = () => command.ExecuteNonQuery();
+        act.Should().Throw<Exception>().And.Should().Be(expectedException);
+    }
 }

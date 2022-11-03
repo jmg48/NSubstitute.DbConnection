@@ -1,3 +1,4 @@
+using System;
 using System.Data;
 using System.Linq;
 using Dapper;
@@ -48,5 +49,21 @@ public class DapperQueryTests
         result.Count.Should().Be(1);
         result[0].Key.Should().Be(1);
         result[0].Value.Should().Be("abc");
+    }
+
+    [Test]
+    public void ShouldMockQueryThrow()
+    {
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var expectedException = new Exception();
+        mockConnection.SetupQuery("delete from table")
+            .Throws(expectedException);
+
+        using var command = mockConnection.CreateCommand();
+        command.CommandText = "delete from table";
+        mockConnection.Open();
+
+        var act = () => mockConnection.Query("delete from table");
+        act.Should().Throw<Exception>().And.Should().Be(expectedException);
     }
 }
