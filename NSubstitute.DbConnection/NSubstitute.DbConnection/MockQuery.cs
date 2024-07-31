@@ -10,7 +10,7 @@
 
     internal class MockQuery : IMockQueryBuilder, IMockQueryResultBuilder
     {
-        public Dictionary<string, object> Parameters { get; set; }
+        public Dictionary<string, QueryParameter> Parameters { get; set; }
 
         public List<(Type RowType, Func<QueryInfo, IReadOnlyList<object>> Rows)> ResultSelectors { get; } = new List<(Type RowType, Func<QueryInfo, IReadOnlyList<object>> Rows)>();
 
@@ -24,22 +24,70 @@
         {
             if (Parameters == null)
             {
-                Parameters = new Dictionary<string, object>();
+                Parameters = new Dictionary<string, QueryParameter>();
             }
 
-            Parameters[name] = value;
+            Parameters[name] = new QueryParameter(name, value);
             return this;
         }
 
         public IMockQueryBuilder WithParameters(IReadOnlyDictionary<string, object> parameters)
         {
-            Parameters = parameters.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            if (Parameters == null)
+            {
+                Parameters = new Dictionary<string, QueryParameter>();
+            }
+
+            foreach (var kvp in parameters)
+            {
+                Parameters.Add(kvp.Key, new QueryParameter(kvp.Key, kvp.Value));
+            }
+
             return this;
         }
 
         public IMockQueryBuilder WithParameters(params (string Key, object Value)[] parameters)
         {
-            Parameters = parameters.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            if (Parameters == null)
+            {
+                Parameters = new Dictionary<string, QueryParameter>();
+            }
+
+            foreach (var kvp in parameters)
+            {
+                Parameters.Add(kvp.Key, new QueryParameter(kvp.Key, kvp.Value));
+            }
+
+            return this;
+        }
+
+        public IMockQueryBuilder WithOutputParameters(IReadOnlyDictionary<string, object> parameters)
+        {
+            if (Parameters == null)
+            {
+                Parameters = new Dictionary<string, QueryParameter>();
+            }
+
+            foreach (var kvp in parameters)
+            {
+                Parameters.Add(kvp.Key, new QueryParameter(kvp.Key, kvp.Value, true));
+            }
+
+            return this;
+        }
+
+        public IMockQueryBuilder WithOutputParameters(params (string Key, object Value)[] parameters)
+        {
+            if (Parameters == null)
+            {
+                Parameters = new Dictionary<string, QueryParameter>();
+            }
+
+            foreach (var kvp in parameters)
+            {
+                Parameters.Add(kvp.Key, new QueryParameter(kvp.Key, kvp.Value, true));
+            }
+
             return this;
         }
 
@@ -95,7 +143,7 @@
             {
                 if (!(command.Parameters[i] is DbParameter parameter) ||
                     !Parameters.TryGetValue(parameter.ParameterName, out var parameterValue) ||
-                    !DbEquals(parameterValue, parameter))
+                    !DbEquals(parameterValue.Value, parameter))
                 {
                     return false;
                 }
@@ -141,6 +189,7 @@
 
             mockReader[Arg.Any<int>()].Returns(ci => properties[resultSetIndex][(int)ci[0]].GetValue(resultSets[resultSetIndex][rowIndex]));
             mockReader[Arg.Any<string>()].Returns(ci => propertiesByName[resultSetIndex][(string)ci[0]].GetValue(resultSets[resultSetIndex][rowIndex]));
+            SetupOutputParams(mockCommand, Parameters);
 
             return mockReader;
         }
@@ -148,12 +197,13 @@
         public int ExecuteNonQuery(IDbCommand mockCommand)
         {
             var queryInfo = GetQueryInfo(mockCommand);
+            SetupOutputParams(mockCommand, Parameters);
             return RowCountSelector?.Invoke(queryInfo) ?? ResultSelectors.SelectMany(resultSelector => resultSelector.Rows(queryInfo)).Count();
         }
 
         private static bool DbEquals(object parameterValue, DbParameter parameter)
         {
-            if (parameterValue == null && parameter.Value is DBNull)
+            if ((parameterValue == null && parameter.Value is DBNull) || parameter.Direction == ParameterDirection.Output)
             {
                 return true;
             }
@@ -193,6 +243,23 @@
                 Parameters = parameters,
             };
             return queryInfo;
+        }
+
+        private static void SetupOutputParams(IDbCommand mockCommand, Dictionary<string, QueryParameter> parameters)
+        {
+            for (var i = 0; i < mockCommand.Parameters.Count; i++)
+            {
+                var cmdParam = mockCommand.Parameters[i];
+                if (cmdParam is DbParameter dbParameter && dbParameter.Direction == ParameterDirection.Output)
+                {
+                    if (!parameters.TryGetValue(dbParameter.ParameterName, out var value))
+                    {
+                        throw new NotSupportedException($"Unmatched output parameter: '{mockCommand.CommandText}'");
+                    }
+
+                    dbParameter.Value = value.Value;
+                }
+            }
         }
     }
 }

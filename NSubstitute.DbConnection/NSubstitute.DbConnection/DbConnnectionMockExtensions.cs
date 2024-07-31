@@ -109,7 +109,7 @@
             mockParameters.Contains(Arg.Any<object>()).Throws<NotSupportedException>();
             mockParameters.Contains(Arg.Any<string>()).Returns(ci => parameters.Any(parameter => parameter.ParameterName == (string)ci[0]));
             mockParameters[Arg.Any<int>()].Returns(ci => parameters[(int)ci[0]]);
-            mockParameters[Arg.Any<string>()].Throws<NotSupportedException>();
+            mockParameters[Arg.Any<string>()].Returns(ci => parameters.First(p => p.ParameterName.Equals((string)ci[0])));
 
             mockCommand.Parameters.Returns(ci => mockParameters);
             mockCommand.CreateParameter().Returns(ci => Substitute.For<DbParameter>());
