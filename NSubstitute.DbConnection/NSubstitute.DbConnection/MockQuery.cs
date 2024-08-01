@@ -31,65 +31,17 @@
             return this;
         }
 
-        public IMockQueryBuilder WithParameters(IReadOnlyDictionary<string, object> parameters)
-        {
-            if (Parameters == null)
-            {
-                Parameters = new Dictionary<string, QueryParameter>();
-            }
+        public IMockQueryBuilder WithParameters(IReadOnlyDictionary<string, object> parameters) =>
+            SetParameters(parameters.Select(kvp => (kvp.Key, new QueryParameter(kvp.Key, kvp.Value))));
 
-            foreach (var kvp in parameters)
-            {
-                Parameters.Add(kvp.Key, new QueryParameter(kvp.Key, kvp.Value));
-            }
+        public IMockQueryBuilder WithParameters(params (string Key, object Value)[] parameters) =>
+            SetParameters(parameters.Select(kvp => (kvp.Key, new QueryParameter(kvp.Key, kvp.Value))));
 
-            return this;
-        }
+        public IMockQueryBuilder WithOutputParameters(IReadOnlyDictionary<string, object> parameters) =>
+            SetParameters(parameters.Select(kvp => (kvp.Key, new QueryParameter(kvp.Key, kvp.Value, true))));
 
-        public IMockQueryBuilder WithParameters(params (string Key, object Value)[] parameters)
-        {
-            if (Parameters == null)
-            {
-                Parameters = new Dictionary<string, QueryParameter>();
-            }
-
-            foreach (var kvp in parameters)
-            {
-                Parameters.Add(kvp.Key, new QueryParameter(kvp.Key, kvp.Value));
-            }
-
-            return this;
-        }
-
-        public IMockQueryBuilder WithOutputParameters(IReadOnlyDictionary<string, object> parameters)
-        {
-            if (Parameters == null)
-            {
-                Parameters = new Dictionary<string, QueryParameter>();
-            }
-
-            foreach (var kvp in parameters)
-            {
-                Parameters.Add(kvp.Key, new QueryParameter(kvp.Key, kvp.Value, true));
-            }
-
-            return this;
-        }
-
-        public IMockQueryBuilder WithOutputParameters(params (string Key, object Value)[] parameters)
-        {
-            if (Parameters == null)
-            {
-                Parameters = new Dictionary<string, QueryParameter>();
-            }
-
-            foreach (var kvp in parameters)
-            {
-                Parameters.Add(kvp.Key, new QueryParameter(kvp.Key, kvp.Value, true));
-            }
-
-            return this;
-        }
+        public IMockQueryBuilder WithOutputParameters(params (string Key, object OutputValue)[] parameters) =>
+            SetParameters(parameters.Select(kvp => (kvp.Key, new QueryParameter(kvp.Key, kvp.OutputValue, true))));
 
         public IMockQueryResultBuilder Returns<T>(IEnumerable<T> results)
         {
@@ -141,9 +93,9 @@
 
             for (var i = 0; i < command.Parameters.Count; i++)
             {
-                if (!(command.Parameters[i] is DbParameter parameter) ||
-                    !Parameters.TryGetValue(parameter.ParameterName, out var parameterValue) ||
-                    !DbEquals(parameterValue.Value, parameter))
+                if (!(command.Parameters[i] is DbParameter commandParameter) ||
+                    !Parameters.TryGetValue(commandParameter.ParameterName, out var mockParameter) ||
+                    !DbEquals(mockParameter.Value, commandParameter))
                 {
                     return false;
                 }
@@ -245,21 +197,31 @@
             return queryInfo;
         }
 
-        private static void SetupOutputParams(IDbCommand mockCommand, Dictionary<string, QueryParameter> parameters)
+        private static void SetupOutputParams(IDbCommand mockCommand, Dictionary<string, QueryParameter> mockParameters)
         {
             for (var i = 0; i < mockCommand.Parameters.Count; i++)
             {
                 var cmdParam = mockCommand.Parameters[i];
                 if (cmdParam is DbParameter dbParameter && dbParameter.Direction == ParameterDirection.Output)
                 {
-                    if (!parameters.TryGetValue(dbParameter.ParameterName, out var value))
-                    {
-                        throw new NotSupportedException($"Unmatched output parameter: '{mockCommand.CommandText}'");
-                    }
-
-                    dbParameter.Value = value.Value;
+                    dbParameter.Value = mockParameters[dbParameter.ParameterName].Value;
                 }
             }
+        }
+
+        private IMockQueryBuilder SetParameters(IEnumerable<(string Key, QueryParameter Value)> parameters)
+        {
+            if (Parameters == null)
+            {
+                Parameters = new Dictionary<string, QueryParameter>();
+            }
+
+            foreach (var kvp in parameters)
+            {
+                Parameters.Add(kvp.Key, kvp.Value);
+            }
+
+            return this;
         }
     }
 }

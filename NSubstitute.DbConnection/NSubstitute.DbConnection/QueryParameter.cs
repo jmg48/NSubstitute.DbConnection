@@ -8,17 +8,17 @@
             Value = value;
         }
 
-        public QueryParameter(string name, object value, bool output)
+        public QueryParameter(string name, object value, bool isOutput)
         {
             Name = name;
             Value = value;
-            Output = output;
+            IsOutput = isOutput;
         }
 
         public string Name { get; set; }
 
         public object Value { get; set; }
 
-        public bool Output { get; set; }
+        public bool IsOutput { get; set; }
     }
 }
