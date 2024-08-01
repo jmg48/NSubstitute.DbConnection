@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using FluentAssertions;
 using NUnit.Framework;
 
@@ -248,5 +249,87 @@ public class QueryParameterMatchingTests
             command.AddParameter("id", 1);
         });
         result.Should().Throw<NotSupportedException>().WithMessage(NoMatchingQueryErrorMessage+$": '{commandText}'");
+    }
+
+    [Test]
+    public void ShouldIncludeOutputParametersWhenMatching()
+    {
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var commandText = "spMySproc";
+        var record = new KeyValueRecord(1, "abc");
+        mockConnection.SetupQuery(commandText)
+            .WithParameters(new Dictionary<string, object> { { "id", 1 } })
+            .WithOutputParameters(("output", 7))
+            .Returns(record);
+
+        using var command = mockConnection.CreateCommand();
+        command.CommandText = commandText;
+        command.AddParameter("id", 1);
+        command.AddOutputParameter("output", DbType.Byte);
+        mockConnection.Open();
+
+        command.ExecuteNonQuery().Should().Be(1);
+        command.Parameters["output"].As<DbParameter>().Value.Should().Be(7);
+    }
+
+    [Test]
+    public void ShouldIncludeOutputParametersWhenMatchingQuery()
+    {
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var commandText = "select * from table";
+
+        var record = new KeyValueRecord(1, "abc");
+        mockConnection.SetupQuery(commandText)
+            .WithOutputParameters(("output", "example"))
+            .Returns(record);
+        
+        using var command = mockConnection.CreateCommand();
+        command.CommandText = commandText;
+        command.AddOutputParameter("output", DbType.String);
+
+        var reader = command.ExecuteReader();
+
+        reader.AssertSingleRecord(record);
+        command.Parameters["output"].As<DbParameter>().Value.Should().Be("example");
+    }
+
+    [Test]
+    public void ShouldFailWithNoMatchingOutputParameter()
+    {
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var commandText = "spMySproc";
+        var record = new KeyValueRecord(1, "abc");
+        mockConnection.SetupQuery(commandText)
+            .WithParameters(new Dictionary<string, object> { { "id", 1 } })
+            .WithOutputParameters(("output", 7))
+            .Returns(record);
+
+        using var command = mockConnection.CreateCommand();
+        command.CommandText = commandText;
+        command.AddParameter("id", 1);
+        mockConnection.Open();
+
+        var act = () => command.ExecuteNonQuery();
+        act.Should().Throw<NotSupportedException>().WithMessage(NoMatchingQueryErrorMessage + $": '{commandText}'");
+    }
+
+    [Test]
+    public void ShouldFailWithUnexpectedOutputParameterOnCommand()
+    {
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var commandText = "spMySproc";
+        var record = new KeyValueRecord(1, "abc");
+        mockConnection.SetupQuery(commandText)
+            .WithParameters(new Dictionary<string, object> { { "id", 1 } })
+            .Returns(record);
+
+        using var command = mockConnection.CreateCommand();
+        command.CommandText = commandText;
+        command.AddParameter("id", 1);
+        command.AddOutputParameter("output", DbType.Byte);
+        mockConnection.Open();
+
+        var act = () => command.ExecuteNonQuery();
+        act.Should().Throw<NotSupportedException>().WithMessage(NoMatchingQueryErrorMessage + $": '{commandText}'");
     }
 }

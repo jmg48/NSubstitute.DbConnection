@@ -40,4 +40,13 @@ public static class QueryExtensions
         parameter.Value = value;
         command.Parameters.Add(parameter);
     }
+
+    public static void AddOutputParameter(this IDbCommand command, string name, DbType dbType)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Direction = ParameterDirection.Output;
+        parameter.DbType = dbType;
+        command.Parameters.Add(parameter);
+    }
 }
