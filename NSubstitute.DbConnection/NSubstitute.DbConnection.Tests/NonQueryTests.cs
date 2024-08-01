@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using NUnit.Framework;
@@ -37,6 +38,8 @@ public class NonQueryTests
         await mockConnection.OpenAsync();
 
         (await command.ExecuteNonQueryAsync()).Should().Be(1);
+
+        (await command.ExecuteNonQueryAsync(CancellationToken.None)).Should().Be(1);
     }
 
     [Test]

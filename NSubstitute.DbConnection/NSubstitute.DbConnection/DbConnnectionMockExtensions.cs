@@ -123,10 +123,14 @@
             mockCommand.ExecuteReaderAsync(Arg.Any<CommandBehavior>(), Arg.Any<CancellationToken>()).Returns(ExecuteReader);
 
             int ExecuteNonQuery(CallInfo ci) => result.ExecuteNonQuery(mockCommand);
-
             mockCommand.ExecuteNonQuery().Returns(ExecuteNonQuery);
             mockCommand.ExecuteNonQueryAsync().Returns(ExecuteNonQuery);
             mockCommand.ExecuteNonQueryAsync(Arg.Any<CancellationToken>()).Returns(ExecuteNonQuery);
+
+            object ExecuteScalar(CallInfo ci) => result.ExecuteScalar(mockCommand);
+            mockCommand.ExecuteScalar().Returns(ExecuteScalar);
+            mockCommand.ExecuteScalarAsync().Returns(ExecuteScalar);
+            mockCommand.ExecuteScalarAsync(Arg.Any<CancellationToken>()).Returns(ExecuteScalar);
 
             return mockCommand;
         }

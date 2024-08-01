@@ -153,6 +153,11 @@
             return RowCountSelector?.Invoke(queryInfo) ?? ResultSelectors.SelectMany(resultSelector => resultSelector.Rows(queryInfo)).Count();
         }
 
+        public object ExecuteScalar(IDbCommand mockCommand)
+        {
+            throw new NotImplementedException();
+        }
+
         private static bool DbEquals(object parameterValue, DbParameter parameter)
         {
             if ((parameterValue == null && parameter.Value is DBNull) || parameter.Direction == ParameterDirection.Output)

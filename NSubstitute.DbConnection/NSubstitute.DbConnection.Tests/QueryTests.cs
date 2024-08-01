@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using NUnit.Framework;
@@ -66,6 +67,35 @@ public class QueryTests
 
         (await reader.ReadAsync()).Should().BeFalse();
         (await reader.NextResultAsync()).Should().BeFalse();
+    }
+
+    [Test]
+    public async Task ShouldMockQueryAsyncWithCancellation()
+    {
+        var mockConnection = Substitute.For<DbConnection>().SetupCommands();
+        mockConnection.SetupQuery("select * from table")
+            .Returns(new KeyValueRecord(1, "abc"));
+
+        await using var command = mockConnection.CreateCommand();
+        command.CommandText = "select * from table";
+        await mockConnection.OpenAsync(CancellationToken.None);
+        await using var reader = await command.ExecuteReaderAsync(CancellationToken.None);
+
+        (await reader.ReadAsync(CancellationToken.None)).Should().BeTrue();
+
+        reader.FieldCount.Should().Be(2);
+        reader.GetName(0).Should().Be("Key");
+        reader.GetName(1).Should().Be("Value");
+        reader.GetFieldType(0).Should().Be(typeof(int));
+        reader.GetFieldType(1).Should().Be(typeof(string));
+
+        reader[0].Should().Be(1);
+        reader[1].Should().Be("abc");
+        reader["Key"].Should().Be(1);
+        reader["Value"].Should().Be("abc");
+
+        (await reader.ReadAsync(CancellationToken.None)).Should().BeFalse();
+        (await reader.NextResultAsync(CancellationToken.None)).Should().BeFalse();
     }
 
     [Test]
