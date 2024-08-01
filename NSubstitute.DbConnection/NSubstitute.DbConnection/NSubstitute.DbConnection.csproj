@@ -2,21 +2,31 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>2.8.0.0</Version>
+    <Version>2.9.0.0</Version>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <CodeAnalysisRuleSet>..\StyleCop.Analyzers.ruleset</CodeAnalysisRuleSet>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>NSubstitute.Community.DbConnection</PackageId>
     <RepositoryUrl>https://github.com/jmg48/NSubstitute.DbConnection</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageLicenseFile></PackageLicenseFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <Description>Hassle-free mocking of database queries using NSubstitute</Description>
+    <Authors>Jon Glass</Authors>
+    <Copyright>Copyright (c) 2024 Jon Glass and other contributors</Copyright>
+    <PackageProjectUrl>https://github.com/jmg48/NSubstitute.DbConnection</PackageProjectUrl>
+    <PackageReleaseNotes>Added support for output parameters</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="..\..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
