@@ -7,6 +7,7 @@
     using System.Linq;
     using System.Threading;
     using NSubstitute.Core;
+    using NSubstitute.ExceptionExtensions;
 
     internal class MockQuery : IMockQueryBuilder, IMockQueryResultBuilder
     {
@@ -135,6 +136,37 @@
             mockReader[Arg.Any<int>()].Returns(ci => properties[resultSetIndex][(int)ci[0]].GetValue(resultSets[resultSetIndex][rowIndex]));
             mockReader[Arg.Any<string>()].Returns(ci => propertiesByName[resultSetIndex][(string)ci[0]].GetValue(resultSets[resultSetIndex][rowIndex]));
 
+            var toDo = new NotImplementedException(
+                "Not yet implemented - if you need this method please raise a request on github :)");
+            mockReader.GetEnumerator().Throws(toDo);
+            mockReader.GetBoolean(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetByte(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetBytes(Arg.Any<int>(), Arg.Any<long>(), Arg.Any<byte[]>(), Arg.Any<int>(), Arg.Any<int>()).Throws(toDo);
+            mockReader.GetChar(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetChars(Arg.Any<int>(), Arg.Any<long>(), Arg.Any<char[]>(), Arg.Any<int>(), Arg.Any<int>()).Throws(toDo);
+            mockReader.GetData(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetDataTypeName(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetDateTime(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetDecimal(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetDouble(Arg.Any<int>()).Throws(toDo);
+            ////mockReader.GetFieldValue<>(Arg.Any<int>()).Throws(toDo);
+            ////mockReader.GetFieldValueAsync<>(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetFloat(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetGuid(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetInt16(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetInt32(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetInt64(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetOrdinal(Arg.Any<string>()).Throws(toDo);
+            mockReader.GetString(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetValue(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetValues(Arg.Any<object[]>()).Throws(toDo);
+            mockReader.GetStream(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetTextReader(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetSchemaTable().Throws(toDo);
+            mockReader.GetProviderSpecificFieldType(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetProviderSpecificValue(Arg.Any<int>()).Throws(toDo);
+            mockReader.GetProviderSpecificValues(Arg.Any<object[]>()).Throws(toDo);
+
             SetupOutputParams(mockCommand, Parameters);
 
             return mockReader;
@@ -149,9 +181,8 @@
 
         public object ExecuteScalar(IDbCommand mockCommand)
         {
-            var queryInfo = GetQueryInfo(mockCommand);
-            SetupOutputParams(mockCommand, Parameters);
-            return 1;
+            var reader = ExecuteReader(mockCommand);
+            return reader.Read() ? reader[0] : null;
         }
 
         private static bool DbEquals(object parameterValue, DbParameter parameter)

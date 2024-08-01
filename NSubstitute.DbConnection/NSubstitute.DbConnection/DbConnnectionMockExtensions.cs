@@ -1,6 +1,7 @@
 ﻿namespace NSubstitute.DbConnection
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Data;
     using System.Data.Common;
@@ -103,16 +104,25 @@
                         parameters.Add((DbParameter)ci[0]);
                         return parameters.Count - 1;
                     });
-            mockParameters.Count.Returns(ci => parameters.Count);
+            mockParameters.Count.Returns(_ => parameters.Count);
             mockParameters.When(x => x.AddRange(Arg.Any<Array>())).Throw<NotSupportedException>();
-            mockParameters.When(x => x.Clear()).Do(ci => parameters.Clear());
+            mockParameters.When(x => x.Clear()).Do(_ => parameters.Clear());
             mockParameters.Contains(Arg.Any<object>()).Throws<NotSupportedException>();
             mockParameters.Contains(Arg.Any<string>()).Returns(ci => parameters.Any(parameter => parameter.ParameterName == (string)ci[0]));
+            mockParameters.GetEnumerator().Returns(ci =>
+            {
+                var enumerator = Substitute.For<IEnumerator>();
+                var position = -1;
+                enumerator.MoveNext().Returns(_ => ++position < parameters.Count);
+                enumerator.When(x => x.Reset()).Do(_ => position = -1);
+                enumerator.Current.Returns(_ => parameters[position]);
+                return enumerator;
+            });
             mockParameters[Arg.Any<int>()].Returns(ci => parameters[(int)ci[0]]);
             mockParameters[Arg.Any<string>()].Returns(ci => parameters.First(p => p.ParameterName.Equals((string)ci[0])));
 
-            mockCommand.Parameters.Returns(ci => mockParameters);
-            mockCommand.CreateParameter().Returns(ci => Substitute.For<DbParameter>());
+            mockCommand.Parameters.Returns(_ => mockParameters);
+            mockCommand.CreateParameter().Returns(_ => Substitute.For<DbParameter>());
 
             DbDataReader ExecuteReader(CallInfo ci) => result.ExecuteReader(mockCommand);
             mockCommand.ExecuteReader().Returns(ExecuteReader);

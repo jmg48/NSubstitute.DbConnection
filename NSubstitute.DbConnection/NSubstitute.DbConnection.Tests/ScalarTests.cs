@@ -31,13 +31,13 @@ public class ScalarTests
     {
         var mockConnection = Substitute.For<DbConnection>().SetupCommands();
         mockConnection.SetupQuery("select * from table")
-            .Returns(new { Id = 1 });
+            .Returns(new { Id = true });
 
         await using var command = mockConnection.CreateCommand();
         command.CommandText = "select * from table";
         await mockConnection.OpenAsync();
 
-        (await command.ExecuteScalarAsync()).Should().Be(1);
+        (await command.ExecuteScalarAsync()).Should().Be(true);
     }
 
     [Test]
@@ -45,12 +45,26 @@ public class ScalarTests
     {
         var mockConnection = Substitute.For<DbConnection>().SetupCommands();
         mockConnection.SetupQuery("select * from table")
-            .Returns(new { Id = 1 });
+            .Returns(new { Id = "foo" });
 
         await using var command = mockConnection.CreateCommand();
         command.CommandText = "select * from table";
         await mockConnection.OpenAsync(CancellationToken.None);
 
-        (await command.ExecuteScalarAsync(CancellationToken.None)).Should().Be(1);
+        (await command.ExecuteScalarAsync(CancellationToken.None)).Should().Be("foo");
+    }
+
+    [Test]
+    public void ShouldReturnNullForEmptyResultSet()
+    {
+        var mockConnection = Substitute.For<DbConnection>().SetupCommands();
+        mockConnection.SetupQuery("select * from table")
+            .Returns<KeyValueRecord>();
+
+        using var command = mockConnection.CreateCommand();
+        command.CommandText = "select * from table";
+        mockConnection.Open();
+
+        command.ExecuteScalar().Should().Be(null);
     }
 }
