@@ -91,17 +91,10 @@
                 return false;
             }
 
-            for (var i = 0; i < command.Parameters.Count; i++)
-            {
-                if (!(command.Parameters[i] is DbParameter commandParameter) ||
-                    !Parameters.TryGetValue(commandParameter.ParameterName, out var mockParameter) ||
-                    !DbEquals(mockParameter.Value, commandParameter))
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            return command.Parameters.Cast<object>().All(parameter =>
+                parameter is DbParameter dbParameter &&
+                    Parameters.TryGetValue(dbParameter.ParameterName, out var mockParameter) &&
+                    DbEquals(mockParameter.Value, dbParameter));
         }
 
         public DbDataReader ExecuteReader(IDbCommand mockCommand)
@@ -141,6 +134,7 @@
 
             mockReader[Arg.Any<int>()].Returns(ci => properties[resultSetIndex][(int)ci[0]].GetValue(resultSets[resultSetIndex][rowIndex]));
             mockReader[Arg.Any<string>()].Returns(ci => propertiesByName[resultSetIndex][(string)ci[0]].GetValue(resultSets[resultSetIndex][rowIndex]));
+
             SetupOutputParams(mockCommand, Parameters);
 
             return mockReader;
@@ -155,7 +149,9 @@
 
         public object ExecuteScalar(IDbCommand mockCommand)
         {
-            throw new NotImplementedException();
+            var queryInfo = GetQueryInfo(mockCommand);
+            SetupOutputParams(mockCommand, Parameters);
+            return 1;
         }
 
         private static bool DbEquals(object parameterValue, DbParameter parameter)
@@ -185,28 +181,25 @@
         private static QueryInfo GetQueryInfo(IDbCommand mockCommand)
         {
             var parameters = new Dictionary<string, object>();
-            for (var i = 0; i < mockCommand.Parameters.Count; i++)
+            foreach (var parameter in mockCommand.Parameters)
             {
-                var parameter = mockCommand.Parameters[i];
                 if (parameter is DbParameter dbParameter)
                 {
                     parameters.Add(dbParameter.ParameterName, dbParameter.Value);
                 }
             }
 
-            var queryInfo = new QueryInfo
+            return new QueryInfo
             {
                 QueryText = mockCommand.CommandText,
                 Parameters = parameters,
             };
-            return queryInfo;
         }
 
-        private static void SetupOutputParams(IDbCommand mockCommand, Dictionary<string, QueryParameter> mockParameters)
+        private static void SetupOutputParams(IDbCommand mockCommand, IReadOnlyDictionary<string, QueryParameter> mockParameters)
         {
-            for (var i = 0; i < mockCommand.Parameters.Count; i++)
+            foreach (var cmdParam in mockCommand.Parameters)
             {
-                var cmdParam = mockCommand.Parameters[i];
                 if (cmdParam is DbParameter dbParameter && dbParameter.Direction == ParameterDirection.Output)
                 {
                     dbParameter.Value = mockParameters[dbParameter.ParameterName].Value;
