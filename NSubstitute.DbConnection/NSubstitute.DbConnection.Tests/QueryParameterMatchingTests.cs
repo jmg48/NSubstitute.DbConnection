@@ -332,4 +332,69 @@ public class QueryParameterMatchingTests
         var act = () => command.ExecuteNonQuery();
         act.Should().Throw<NotSupportedException>().WithMessage(NoMatchingQueryErrorMessage + $": '{commandText}'");
     }
+
+    [Test]
+    public void ShouldMatchTableValuedParameters()
+    {
+        var commandText = "spMySproc";
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var record = new KeyValueRecord(1, "abc");
+        var tvpRowId = Guid.NewGuid();
+        var mockTvp = DataTableOf((tvpRowId, 1));
+        mockConnection.SetupQuery(commandText)
+            .WithParameters(new Dictionary<string, object> { { "tvp", mockTvp} })
+            .Returns(record);
+
+        var queryTvp = DataTableOf((tvpRowId, 1));
+
+        using var command = mockConnection.CreateCommand();
+        command.CommandText = commandText;
+        command.AddParameter("tvp", queryTvp);
+
+        var reader = command.ExecuteReader();
+        reader.AssertSingleRecord(record);
+    }
+
+    [Test]
+    public void ShouldFailIfTableValuedParametersDiffer()
+    {
+        var commandText = "spMySproc";
+        var mockConnection = Substitute.For<IDbConnection>().SetupCommands();
+        var record = new KeyValueRecord(1, "abc");
+        var tvpRowId = Guid.NewGuid();
+        var mockTvp = DataTableOf((tvpRowId, 1));
+        mockConnection.SetupQuery(commandText)
+            .WithParameters(new Dictionary<string, object> { { "tvp", mockTvp } })
+            .Returns(record);
+
+        var queryTvp = DataTableOf((tvpRowId, 2));
+
+        using var command = mockConnection.CreateCommand();
+        command.CommandText = commandText;
+        command.AddParameter("tvp", queryTvp);
+
+        var act = () => command.ExecuteNonQuery();
+        act.Should().Throw<NotSupportedException>().WithMessage(NoMatchingQueryErrorMessage + $": '{commandText}'");
+
+        queryTvp = DataTableOf((Guid.NewGuid(), 1));
+        using var command2 = mockConnection.CreateCommand();
+        command2.CommandText = commandText;
+        act = () => command2.ExecuteNonQuery();
+        act.Should().Throw<NotSupportedException>().WithMessage(NoMatchingQueryErrorMessage + $": '{commandText}'");
+    }
+
+    private static DataTable DataTableOf(params (Guid tvpRowId, int value)[] rows)
+    {
+        var mockTvp = new DataTable();
+        mockTvp.Columns.AddRange(new[]
+        {
+            new DataColumn("Id", typeof(Guid)),
+            new DataColumn("Value", typeof(int)),
+        });
+        foreach (var valueTuple in rows)
+        {
+            mockTvp.Rows.Add(valueTuple.tvpRowId, valueTuple.value);
+        }
+        return mockTvp;
+    }
 }
