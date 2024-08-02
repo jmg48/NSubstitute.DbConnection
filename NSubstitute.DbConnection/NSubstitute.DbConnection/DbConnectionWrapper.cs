@@ -5,6 +5,8 @@
     using System.Data;
     using System.Data.Common;
     using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
 
     internal class DbConnectionWrapper : DbConnection
     {
@@ -35,9 +37,13 @@
 
         public override void Open() => _inner.Open();
 
+        public override async Task OpenAsync(CancellationToken cancellationToken) => _inner.Open();
+
         public DbDataReader ExecuteReader(IDbCommand mockCommand) => GetMatchingQuery(mockCommand).ExecuteReader(mockCommand);
 
         public int ExecuteNonQuery(IDbCommand mockCommand) => GetMatchingQuery(mockCommand).ExecuteNonQuery(mockCommand);
+
+        public object ExecuteScalar(IDbCommand mockCommand) => GetMatchingQuery(mockCommand).ExecuteScalar(mockCommand);
 
         public IMockQueryBuilder AddQuery(Func<string, bool> matcher)
         {

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>2.9.0.0</Version>
+    <Version>2.10.0.0</Version>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <CodeAnalysisRuleSet>..\StyleCop.Analyzers.ruleset</CodeAnalysisRuleSet>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
@@ -14,7 +14,7 @@
     <Authors>Jon Glass</Authors>
     <Copyright>Copyright (c) 2024 Jon Glass and other contributors</Copyright>
     <PackageProjectUrl>https://github.com/jmg48/NSubstitute.DbConnection</PackageProjectUrl>
-    <PackageReleaseNotes>Added support for output parameters</PackageReleaseNotes>
+    <PackageReleaseNotes>Added support for ExecuteScalar and its async equivalents</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
