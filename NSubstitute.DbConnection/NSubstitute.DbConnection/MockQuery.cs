@@ -188,7 +188,7 @@
 
         private static bool DbEquals(object parameterValue, DbParameter parameter)
         {
-            if ((parameterValue == null && parameter.Value is DBNull) || parameter.Direction == ParameterDirection.Output)
+            if ((parameterValue == null && parameter.Value is DBNull) || parameter.Direction != ParameterDirection.Input)
             {
                 return true;
             }
