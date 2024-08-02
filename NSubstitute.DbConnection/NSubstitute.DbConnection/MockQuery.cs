@@ -195,7 +195,7 @@
 
             if (parameterValue is DataTable mockTvp && parameter.Value is DataTable dataTable)
             {
-                return dataTable.Equivalent(mockTvp);
+                return new DataTableComparer().Equals(mockTvp, dataTable);
             }
 
             return Equals(parameterValue, parameter.Value);

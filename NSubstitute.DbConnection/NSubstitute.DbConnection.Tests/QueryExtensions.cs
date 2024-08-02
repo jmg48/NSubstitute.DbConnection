@@ -38,6 +38,7 @@ public static class QueryExtensions
         var parameter = command.CreateParameter();
         parameter.ParameterName = name;
         parameter.Value = value;
+        parameter.Direction = ParameterDirection.Input;
         command.Parameters.Add(parameter);
     }
 
