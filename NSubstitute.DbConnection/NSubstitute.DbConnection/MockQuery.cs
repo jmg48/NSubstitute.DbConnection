@@ -7,6 +7,7 @@
     using System.Linq;
     using System.Threading;
     using NSubstitute.Core;
+    using NSubstitute.DbConnection.Extensions;
     using NSubstitute.ExceptionExtensions;
 
     internal class MockQuery : IMockQueryBuilder, IMockQueryResultBuilder
@@ -190,6 +191,11 @@
             if ((parameterValue == null && parameter.Value is DBNull) || parameter.Direction == ParameterDirection.Output)
             {
                 return true;
+            }
+
+            if (parameterValue is DataTable mockTvp && parameter.Value is DataTable dataTable)
+            {
+                return dataTable.Equivalent(mockTvp);
             }
 
             return Equals(parameterValue, parameter.Value);
