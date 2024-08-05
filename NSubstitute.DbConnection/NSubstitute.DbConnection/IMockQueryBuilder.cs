@@ -50,7 +50,7 @@
         IMockQueryBuilder WithOutputParameters(params (string Key, object OutputValue)[] parameters);
 
         /// <summary>
-        /// Specifies that the query will only match if the given return parameters are passed.
+        /// Specifies that the query will only match if the given return parameter is passed.
         /// The provided value will be set on the matching IDbCommand parameter.
         /// </summary>
         /// <param name="parameterName">The name of the return parameter to match on</param>
