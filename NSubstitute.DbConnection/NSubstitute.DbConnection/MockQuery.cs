@@ -45,11 +45,8 @@
         public IMockQueryBuilder WithOutputParameters(params (string Key, object OutputValue)[] parameters) =>
             SetParameters(parameters.Select(kvp => (kvp.Key, new QueryParameter(kvp.Key, kvp.OutputValue, ParameterDirection.Output))));
 
-        public IMockQueryBuilder WithReturnParameters(IReadOnlyDictionary<string, object> parameters) =>
-            SetParameters(parameters.Select(kvp => (kvp.Key, new QueryParameter(kvp.Key, kvp.Value, ParameterDirection.ReturnValue))));
-
-        public IMockQueryBuilder WithReturnParameters(params (string Key, object ReturnValue)[] parameters) =>
-            SetParameters(parameters.Select(kvp => (kvp.Key, new QueryParameter(kvp.Key, kvp.ReturnValue, ParameterDirection.ReturnValue))));
+        public IMockQueryBuilder WithReturnParameter(string parameterName, object returnValue) =>
+            SetParameters(new[] { (parameterName, new QueryParameter(parameterName, returnValue, ParameterDirection.ReturnValue)) });
 
         public IMockQueryBuilder WithInputOutputParameters(params (string Key, object InputValue, object OutputValue)[] parameters) =>
             SetParameters(parameters.Select(kvp => (kvp.Key, new InOutQueryParameter(kvp.Key, kvp.InputValue, kvp.OutputValue))));

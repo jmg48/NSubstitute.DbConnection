@@ -341,7 +341,7 @@ public class QueryParameterMatchingTests
 
         var record = new KeyValueRecord(1, "abc");
         mockConnection.SetupQuery(commandText)
-            .WithReturnParameters(("return", "example"))
+            .WithReturnParameter("return", "example")
             .Returns(record);
 
         using var command = mockConnection.CreateCommand();
@@ -467,7 +467,7 @@ public class QueryParameterMatchingTests
             .WithParameter("id", 1)
             .WithInputOutputParameters(("InOut", "inputValue", "inOutputValue"))
             .WithOutputParameters(("output", "outputValue"))
-            .WithReturnParameters(("return", "returnValue"))
+            .WithReturnParameter("return", "returnValue")
             .Returns(record);
 
         using var command = mockConnection.CreateCommand();

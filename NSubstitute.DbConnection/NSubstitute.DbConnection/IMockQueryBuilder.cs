@@ -53,17 +53,10 @@
         /// Specifies that the query will only match if the given return parameters are passed.
         /// The provided value will be set on the matching IDbCommand parameter.
         /// </summary>
-        /// <param name="parameters">The parameters to match on</param>
+        /// <param name="parameterName">The name of the return parameter to match on</param>
+        /// <param name="returnValue">The value to return</param>
         /// <returns>The query builder</returns>
-        IMockQueryBuilder WithReturnParameters(IReadOnlyDictionary<string, object> parameters);
-
-        /// <summary>
-        /// Specifies that the query will only match if the given return parameters are passed.
-        /// The provided value will be set on the matching IDbCommand parameter.
-        /// </summary>
-        /// <param name="parameters">The parameters to match on</param>
-        /// <returns>The query builder</returns>
-        IMockQueryBuilder WithReturnParameters(params (string Key, object ReturnValue)[] parameters);
+        IMockQueryBuilder WithReturnParameter(string parameterName, object returnValue);
 
         /// <summary>
         /// Specifies that the query will only match if the given InputOutput parameters are passed.
