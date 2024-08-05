@@ -50,6 +50,32 @@
         IMockQueryBuilder WithOutputParameters(params (string Key, object OutputValue)[] parameters);
 
         /// <summary>
+        /// Specifies that the query will only match if the given return parameters are passed.
+        /// The provided value will be set on the matching IDbCommand parameter.
+        /// </summary>
+        /// <param name="parameters">The parameters to match on</param>
+        /// <returns>The query builder</returns>
+        IMockQueryBuilder WithReturnParameters(IReadOnlyDictionary<string, object> parameters);
+
+        /// <summary>
+        /// Specifies that the query will only match if the given return parameters are passed.
+        /// The provided value will be set on the matching IDbCommand parameter.
+        /// </summary>
+        /// <param name="parameters">The parameters to match on</param>
+        /// <returns>The query builder</returns>
+        IMockQueryBuilder WithReturnParameters(params (string Key, object ReturnValue)[] parameters);
+
+        /// <summary>
+        /// Specifies that the query will only match if the given InputOutput parameters are passed.
+        /// The provided InputValue will be matched against the values passed to the query and the OutputValue will
+        /// be set on the matching IDbCommand parameter.
+        /// </summary>
+        /// <param name="parameters">The parameters to match on</param>
+        /// <returns>The query builder</returns>
+        IMockQueryBuilder WithInputOutputParameters(
+            params (string Key, object InputValue, object OutputValue)[] parameters);
+
+        /// <summary>
         /// Specifies the first result set that the query will return.
         /// </summary>
         /// <typeparam name="T">The type of the result</typeparam>
