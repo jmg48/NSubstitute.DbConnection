@@ -33,21 +33,24 @@ public static class QueryExtensions
         reader.NextResult().Should().BeFalse();
     }
 
-    public static void AddParameter<T>(this IDbCommand command, string name, T value)
+    public static void AddParameter<T>(this IDbCommand command, string name, T value) =>
+        AddParameter(command, name, value, ParameterDirection.Input);
+
+    public static void AddOutputParameter(this IDbCommand command, string name) =>
+        AddParameter(command, name, string.Empty, ParameterDirection.Output);
+
+    public static void AddReturnParameter(this IDbCommand command, string name) =>
+        AddParameter(command, name, string.Empty, ParameterDirection.ReturnValue);
+
+    public static void AddInputOutputParameter<T>(this IDbCommand command, string name, T input) =>
+        AddParameter(command, name, input, ParameterDirection.InputOutput);
+
+    public static void AddParameter<T>(this IDbCommand command, string name, T value, ParameterDirection direction)
     {
         var parameter = command.CreateParameter();
         parameter.ParameterName = name;
         parameter.Value = value;
-        parameter.Direction = ParameterDirection.Input;
-        command.Parameters.Add(parameter);
-    }
-
-    public static void AddOutputParameter(this IDbCommand command, string name, DbType dbType)
-    {
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = name;
-        parameter.Direction = ParameterDirection.Output;
-        parameter.DbType = dbType;
+        parameter.Direction = direction;
         command.Parameters.Add(parameter);
     }
 }

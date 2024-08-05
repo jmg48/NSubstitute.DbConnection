@@ -40,10 +40,16 @@
             SetParameters(parameters.Select(kvp => (kvp.Key, new QueryParameter(kvp.Key, kvp.Value))));
 
         public IMockQueryBuilder WithOutputParameters(IReadOnlyDictionary<string, object> parameters) =>
-            SetParameters(parameters.Select(kvp => (kvp.Key, new QueryParameter(kvp.Key, kvp.Value, true))));
+            SetParameters(parameters.Select(kvp => (kvp.Key, new QueryParameter(kvp.Key, kvp.Value, ParameterDirection.Output))));
 
         public IMockQueryBuilder WithOutputParameters(params (string Key, object OutputValue)[] parameters) =>
-            SetParameters(parameters.Select(kvp => (kvp.Key, new QueryParameter(kvp.Key, kvp.OutputValue, true))));
+            SetParameters(parameters.Select(kvp => (kvp.Key, new QueryParameter(kvp.Key, kvp.OutputValue, ParameterDirection.Output))));
+
+        public IMockQueryBuilder WithReturnParameter(string parameterName, object returnValue) =>
+            SetParameters(new[] { (parameterName, new QueryParameter(parameterName, returnValue, ParameterDirection.ReturnValue)) });
+
+        public IMockQueryBuilder WithInputOutputParameters(params (string Key, object InputValue, object OutputValue)[] parameters) =>
+            SetParameters(parameters.Select(kvp => (kvp.Key, new InOutQueryParameter(kvp.Key, kvp.InputValue, kvp.OutputValue))));
 
         public IMockQueryResultBuilder Returns<T>(IEnumerable<T> results)
         {
@@ -188,7 +194,9 @@
 
         private static bool DbEquals(object parameterValue, DbParameter parameter)
         {
-            if ((parameterValue == null && parameter.Value is DBNull) || parameter.Direction != ParameterDirection.Input)
+            if ((parameterValue == null && parameter.Value is DBNull) ||
+                parameter.Direction == ParameterDirection.Output ||
+                parameter.Direction == ParameterDirection.ReturnValue)
             {
                 return true;
             }
@@ -237,14 +245,25 @@
         {
             foreach (var cmdParam in mockCommand.Parameters)
             {
-                if (cmdParam is DbParameter dbParameter && dbParameter.Direction == ParameterDirection.Output)
+                if (cmdParam is DbParameter dbParameter)
                 {
-                    dbParameter.Value = mockParameters[dbParameter.ParameterName].Value;
+                    switch (dbParameter.Direction)
+                    {
+                        case ParameterDirection.InputOutput:
+                            var inOut = mockParameters[dbParameter.ParameterName] as InOutQueryParameter;
+                            dbParameter.Value = inOut?.ReturnValue;
+                            break;
+                        case ParameterDirection.Output:
+                        case ParameterDirection.ReturnValue:
+                            dbParameter.Value = mockParameters[dbParameter.ParameterName].Value;
+                            break;
+                    }
                 }
             }
         }
 
-        private IMockQueryBuilder SetParameters(IEnumerable<(string Key, QueryParameter Value)> parameters)
+        private IMockQueryBuilder SetParameters<T>(IEnumerable<(string Key, T Value)> parameters)
+            where T : QueryParameter
         {
             if (Parameters == null)
             {
