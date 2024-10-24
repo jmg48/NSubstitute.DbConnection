@@ -162,8 +162,6 @@
             mockReader.GetDateTime(Arg.Any<int>()).Throws(ToDo);
             mockReader.GetDecimal(Arg.Any<int>()).Throws(ToDo);
             mockReader.GetDouble(Arg.Any<int>()).Throws(ToDo);
-            ////mockReader.GetFieldValue<>(Arg.Any<int>()).Throws(toDo);
-            ////mockReader.GetFieldValueAsync<>(Arg.Any<int>()).Throws(toDo);
             mockReader.GetFloat(Arg.Any<int>()).Throws(ToDo);
             mockReader.GetGuid(Arg.Any<int>()).Throws(ToDo);
             mockReader.GetInt16(Arg.Any<int>()).Throws(ToDo);
