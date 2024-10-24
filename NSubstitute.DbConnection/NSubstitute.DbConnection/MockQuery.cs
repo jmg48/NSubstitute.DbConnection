@@ -5,6 +5,7 @@
     using System.Data;
     using System.Data.Common;
     using System.Linq;
+    using System.Reflection;
     using System.Threading;
     using NSubstitute.Core;
     using NSubstitute.DbConnection.Extensions;
@@ -134,45 +135,49 @@
                     return true;
                 });
 
+            PropertyInfo FieldByIndex(int index) => properties[resultSetIndex][index];
+            PropertyInfo FieldByName(string name) => propertiesByName[resultSetIndex][name];
+            object GetValue(PropertyInfo field) => field.GetValue(resultSets[resultSetIndex][rowIndex]);
+
             mockReader.FieldCount.Returns(ci => properties[resultSetIndex].Length);
-            mockReader.GetName(Arg.Any<int>()).Returns(ci => properties[resultSetIndex][(int)ci[0]].Name);
-            mockReader.GetFieldType(Arg.Any<int>()).Returns(ci => properties[resultSetIndex][(int)ci[0]].PropertyType);
+            mockReader.GetName(Arg.Any<int>()).Returns(ci => FieldByIndex((int)ci[0]).Name);
+            mockReader.GetFieldType(Arg.Any<int>()).Returns(ci => FieldByIndex((int)ci[0]).PropertyType);
 
             SetupRead(mockReader, ci => ++rowIndex < resultSets[resultSetIndex].Count);
 
-            mockReader[Arg.Any<int>()].Returns(ci => properties[resultSetIndex][(int)ci[0]].GetValue(resultSets[resultSetIndex][rowIndex]));
-            mockReader[Arg.Any<string>()].Returns(ci => propertiesByName[resultSetIndex][(string)ci[0]].GetValue(resultSets[resultSetIndex][rowIndex]));
+            mockReader[Arg.Any<int>()].Returns(ci => GetValue(FieldByIndex((int)ci[0])));
+            mockReader.GetValue(Arg.Any<int>()).Returns(ci => GetValue(FieldByIndex((int)ci[0])));
+            mockReader[Arg.Any<string>()].Returns(ci => GetValue(FieldByName((string)ci[0])));
 
-            var toDo = new NotImplementedException(
-                "Not yet implemented - if you need this method please raise a request on github :)");
-            mockReader.GetEnumerator().Throws(toDo);
-            mockReader.GetBoolean(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetByte(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetBytes(Arg.Any<int>(), Arg.Any<long>(), Arg.Any<byte[]>(), Arg.Any<int>(), Arg.Any<int>()).Throws(toDo);
-            mockReader.GetChar(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetChars(Arg.Any<int>(), Arg.Any<long>(), Arg.Any<char[]>(), Arg.Any<int>(), Arg.Any<int>()).Throws(toDo);
-            mockReader.GetData(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetDataTypeName(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetDateTime(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetDecimal(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetDouble(Arg.Any<int>()).Throws(toDo);
+            Exception ToDo(CallInfo ci) => new NotImplementedException("Not yet implemented - if you need this method please raise a request on github :)");
+
+            mockReader.GetEnumerator().Throws(ToDo);
+            mockReader.GetBoolean(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetByte(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetBytes(Arg.Any<int>(), Arg.Any<long>(), Arg.Any<byte[]>(), Arg.Any<int>(), Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetChar(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetChars(Arg.Any<int>(), Arg.Any<long>(), Arg.Any<char[]>(), Arg.Any<int>(), Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetData(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetDataTypeName(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetDateTime(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetDecimal(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetDouble(Arg.Any<int>()).Throws(ToDo);
             ////mockReader.GetFieldValue<>(Arg.Any<int>()).Throws(toDo);
             ////mockReader.GetFieldValueAsync<>(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetFloat(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetGuid(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetInt16(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetInt32(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetInt64(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetOrdinal(Arg.Any<string>()).Throws(toDo);
-            mockReader.GetString(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetValue(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetValues(Arg.Any<object[]>()).Throws(toDo);
-            mockReader.GetStream(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetTextReader(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetSchemaTable().Throws(toDo);
-            mockReader.GetProviderSpecificFieldType(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetProviderSpecificValue(Arg.Any<int>()).Throws(toDo);
-            mockReader.GetProviderSpecificValues(Arg.Any<object[]>()).Throws(toDo);
+            mockReader.GetFloat(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetGuid(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetInt16(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetInt32(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetInt64(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetOrdinal(Arg.Any<string>()).Throws(ToDo);
+            mockReader.GetString(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetValues(Arg.Any<object[]>()).Throws(ToDo);
+            mockReader.GetStream(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetTextReader(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetSchemaTable().Throws(ToDo);
+            mockReader.GetProviderSpecificFieldType(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetProviderSpecificValue(Arg.Any<int>()).Throws(ToDo);
+            mockReader.GetProviderSpecificValues(Arg.Any<object[]>()).Throws(ToDo);
 
             SetupOutputParams(mockCommand, Parameters);
 
