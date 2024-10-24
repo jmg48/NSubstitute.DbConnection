@@ -29,6 +29,9 @@ public static class QueryExtensions
         reader["Key"].Should().Be(expected.Key);
         reader["Value"].Should().Be(expected.Value);
 
+        reader.GetValue(0).Should().Be(expected.Key);
+        reader.GetValue(1).Should().Be(expected.Value);
+
         reader.Read().Should().BeFalse();
         reader.NextResult().Should().BeFalse();
     }
