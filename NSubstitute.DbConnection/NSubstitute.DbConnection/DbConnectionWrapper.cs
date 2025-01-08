@@ -54,7 +54,12 @@
 
         protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel) => (DbTransaction)_inner.BeginTransaction();
 
-        protected override DbCommand CreateDbCommand() => (DbCommand)_inner.CreateCommand();
+        protected override DbCommand CreateDbCommand()
+        {
+            var cmd = (DbCommand)_inner.CreateCommand();
+            cmd.Connection = this;
+            return cmd;
+        }
 
         private MockQuery GetMatchingQuery(IDbCommand mockCommand) =>
             _queries.FirstOrDefault(query => query.Matches(mockCommand)) ??
