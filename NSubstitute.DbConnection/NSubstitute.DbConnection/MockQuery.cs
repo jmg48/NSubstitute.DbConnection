@@ -135,11 +135,12 @@
                     return true;
                 });
 
+            int FieldCount() => properties[resultSetIndex].Length;
             PropertyInfo FieldByIndex(int index) => properties[resultSetIndex][index];
             PropertyInfo FieldByName(string name) => propertiesByName[resultSetIndex][name];
             object GetValue(PropertyInfo field) => field.GetValue(resultSets[resultSetIndex][rowIndex]);
 
-            mockReader.FieldCount.Returns(ci => properties[resultSetIndex].Length);
+            mockReader.FieldCount.Returns(ci => FieldCount());
             mockReader.GetName(Arg.Any<int>()).Returns(ci => FieldByIndex((int)ci[0]).Name);
             mockReader.GetFieldType(Arg.Any<int>()).Returns(ci => FieldByIndex((int)ci[0]).PropertyType);
 
@@ -151,10 +152,10 @@
             mockReader.GetValues(Arg.Any<object[]>()).Returns(ci =>
             {
                 var values = ci.ArgAt<object[]>(0);
-                int valueCount = Math.Min(values.Length, properties[resultSetIndex].Length);
+                var valueCount = Math.Min(values.Length, FieldCount());
                 for (var fieldIndex = 0; fieldIndex < valueCount; fieldIndex++)
                 {
-                    values[fieldIndex] = properties[resultSetIndex][fieldIndex].GetValue(resultSets[resultSetIndex][rowIndex]);
+                    values[fieldIndex] = GetValue(FieldByIndex(fieldIndex));
                 }
 
                 return valueCount;
