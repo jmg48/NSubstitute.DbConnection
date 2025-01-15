@@ -7,6 +7,7 @@ using NUnit.Framework;
 
 namespace NSubstitute.DbConnection.Tests;
 
+using System.Data;
 using System.Data.Common;
 
 public class QueryTests
@@ -14,14 +15,7 @@ public class QueryTests
     [Test]
     public void ShouldMockQuery()
     {
-        var mockConnection = Substitute.For<DbConnection>().SetupCommands();
-        mockConnection.SetupQuery("select * from table")
-            .Returns(new KeyValueRecord(1, "abc"));
-
-        using var command = mockConnection.CreateCommand();
-        command.CommandText = "select * from table";
-        mockConnection.Open();
-        using var reader = command.ExecuteReader();
+        using var reader = GetSimpleCommandSingleRow(c => c.Open()).ExecuteReader();
 
         reader.Read().Should().BeTrue();
 
@@ -43,14 +37,7 @@ public class QueryTests
     [Test]
     public async Task ShouldMockQueryAsync()
     {
-        var mockConnection = Substitute.For<DbConnection>().SetupCommands();
-        mockConnection.SetupQuery("select * from table")
-            .Returns(new KeyValueRecord(1, "abc"));
-
-        await using var command = mockConnection.CreateCommand();
-        command.CommandText = "select * from table";
-        await mockConnection.OpenAsync();
-        await using var reader = await command.ExecuteReaderAsync();
+        await using var reader = await GetSimpleCommandSingleRow(c => c.OpenAsync()).ExecuteReaderAsync();
 
         (await reader.ReadAsync()).Should().BeTrue();
 
@@ -72,14 +59,7 @@ public class QueryTests
     [Test]
     public async Task ShouldMockQueryAsyncWithCancellation()
     {
-        var mockConnection = Substitute.For<DbConnection>().SetupCommands();
-        mockConnection.SetupQuery("select * from table")
-            .Returns(new KeyValueRecord(1, "abc"));
-
-        await using var command = mockConnection.CreateCommand();
-        command.CommandText = "select * from table";
-        await mockConnection.OpenAsync(CancellationToken.None);
-        await using var reader = await command.ExecuteReaderAsync(CancellationToken.None);
+        await using var reader = await GetSimpleCommandSingleRow(c => c.OpenAsync(CancellationToken.None)).ExecuteReaderAsync(CancellationToken.None);
 
         (await reader.ReadAsync(CancellationToken.None)).Should().BeTrue();
 
@@ -223,5 +203,50 @@ public class QueryTests
 
         var act = () => command.ExecuteReader();
         act.Should().Throw<Exception>().And.Should().Be(expectedException);
+    }
+
+    [Test]
+    public void ShouldReaderReturnValuesArray()
+    {
+        using var reader = GetSimpleCommandSingleRow(c => c.Open()).ExecuteReader();
+
+        reader.Read().Should().BeTrue();
+
+        var values = new object[2];
+        reader.GetValues(values).Should().Be(2);
+        values[0].Should().Be(1);
+        values[1].Should().Be("abc");
+    }
+
+    [Test]
+    public void ShouldReaderIgnoreExtraValues()
+    {
+        using var reader = GetSimpleCommandSingleRow(c => c.Open()).ExecuteReader();
+
+        reader.Read().Should().BeTrue();
+
+        reader.GetValues(new object[10]).Should().Be(2);
+        reader.GetValues(new object[1]).Should().Be(1);
+    }
+
+    [Test]
+    public void ShouldCommandPopulateConnection()
+    {
+        var command = GetSimpleCommandSingleRow(c => c.Open());
+        command.Connection.Should().NotBeNull();
+    }
+
+    private static DbCommand GetSimpleCommandSingleRow(Action<DbConnection> open)
+    {
+        var selectCmd = "select * from table";
+        var mockConnection = Substitute.For<DbConnection>().SetupCommands();
+        mockConnection.SetupQuery(selectCmd)
+            .Returns(new KeyValueRecord(1, "abc"));
+
+        var command = mockConnection.CreateCommand();
+        command.CommandText = selectCmd;
+        open(mockConnection);
+
+        return command;
     }
 }

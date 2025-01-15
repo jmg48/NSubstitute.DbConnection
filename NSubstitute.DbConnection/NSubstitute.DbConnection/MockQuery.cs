@@ -148,6 +148,17 @@
             mockReader[Arg.Any<int>()].Returns(ci => GetValue(FieldByIndex((int)ci[0])));
             mockReader.GetValue(Arg.Any<int>()).Returns(ci => GetValue(FieldByIndex((int)ci[0])));
             mockReader[Arg.Any<string>()].Returns(ci => GetValue(FieldByName((string)ci[0])));
+            mockReader.GetValues(Arg.Any<object[]>()).Returns(ci =>
+            {
+                var values = ci.ArgAt<object[]>(0);
+                int valueCount = Math.Min(values.Length, properties[resultSetIndex].Length);
+                for (var fieldIndex = 0; fieldIndex < valueCount; fieldIndex++)
+                {
+                    values[fieldIndex] = properties[resultSetIndex][fieldIndex].GetValue(resultSets[resultSetIndex][rowIndex]);
+                }
+
+                return valueCount;
+            });
 
             Exception ToDo(CallInfo ci) => new NotImplementedException("Not yet implemented - if you need this method please raise a request on github :)");
 
@@ -169,7 +180,6 @@
             mockReader.GetInt64(Arg.Any<int>()).Throws(ToDo);
             mockReader.GetOrdinal(Arg.Any<string>()).Throws(ToDo);
             mockReader.GetString(Arg.Any<int>()).Throws(ToDo);
-            mockReader.GetValues(Arg.Any<object[]>()).Throws(ToDo);
             mockReader.GetStream(Arg.Any<int>()).Throws(ToDo);
             mockReader.GetTextReader(Arg.Any<int>()).Throws(ToDo);
             mockReader.GetSchemaTable().Throws(ToDo);
