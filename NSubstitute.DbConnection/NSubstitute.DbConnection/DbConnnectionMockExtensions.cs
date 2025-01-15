@@ -122,10 +122,10 @@
             mockParameters[Arg.Any<string>()].Returns(ci => parameters.First(p => p.ParameterName.Equals((string)ci[0])));
 
             mockCommand.Parameters.Returns(_ => mockParameters);
+            mockCommand.Connection.Returns(result);
             mockCommand.CreateParameter().Returns(_ => Substitute.For<DbParameter>());
 
             DbDataReader ExecuteReader(CallInfo ci) => result.ExecuteReader(mockCommand);
-            mockCommand.Connection.Returns(result);
             mockCommand.ExecuteReader().Returns(ExecuteReader);
             mockCommand.ExecuteReader(Arg.Any<CommandBehavior>()).Returns(ExecuteReader);
             mockCommand.ExecuteReaderAsync().Returns(ExecuteReader);
