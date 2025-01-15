@@ -12,21 +12,6 @@ using System.Data.Common;
 
 public class QueryTests
 {
-    private const string SimpleSelect = "select * from table";
-
-    private static DbCommand GetSimpleCommandSingleRow(Action<DbConnection> open)
-    {
-        var mockConnection = Substitute.For<DbConnection>().SetupCommands();
-        mockConnection.SetupQuery(SimpleSelect)
-            .Returns(new KeyValueRecord(1, "abc"));
-
-        var command = mockConnection.CreateCommand();
-        command.CommandText = SimpleSelect;
-        open(mockConnection);
-
-        return command;
-    }
-
     [Test]
     public void ShouldMockQuery()
     {
@@ -238,5 +223,19 @@ public class QueryTests
     {
         var command = GetSimpleCommandSingleRow(c => c.Open());
         command.Connection.Should().NotBeNull();
+    }
+
+    private static DbCommand GetSimpleCommandSingleRow(Action<DbConnection> open)
+    {
+        var selectCmd = "select * from table";
+        var mockConnection = Substitute.For<DbConnection>().SetupCommands();
+        mockConnection.SetupQuery(selectCmd)
+            .Returns(new KeyValueRecord(1, "abc"));
+
+        var command = mockConnection.CreateCommand();
+        command.CommandText = selectCmd;
+        open(mockConnection);
+
+        return command;
     }
 }
