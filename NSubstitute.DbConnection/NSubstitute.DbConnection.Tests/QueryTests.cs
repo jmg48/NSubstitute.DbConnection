@@ -219,6 +219,17 @@ public class QueryTests
     }
 
     [Test]
+    public void ShouldReaderIgnoreExtraValues()
+    {
+        using var reader = GetSimpleCommandSingleRow(c => c.Open()).ExecuteReader();
+
+        reader.Read().Should().BeTrue();
+
+        reader.GetValues(new object[10]).Should().Be(2);
+        reader.GetValues(new object[1]).Should().Be(1);
+    }
+
+    [Test]
     public void ShouldCommandPopulateConnection()
     {
         var command = GetSimpleCommandSingleRow(c => c.Open());
