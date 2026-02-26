@@ -1,10 +1,5 @@
-using System;
 using System.Data;
-using System.Linq;
 using Dapper;
-using FluentAssertions;
-using NSubstitute.DbConnection;
-using NUnit.Framework;
 
 namespace NSubstitute.DbConnection.Dapper.Tests;
 

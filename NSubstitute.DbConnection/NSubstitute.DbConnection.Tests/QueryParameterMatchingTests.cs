@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using FluentAssertions;
-using NUnit.Framework;
 
 namespace NSubstitute.DbConnection.Tests;
 

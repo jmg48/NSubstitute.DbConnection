@@ -1,12 +1,7 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using FluentAssertions;
-using NUnit.Framework;
-
 namespace NSubstitute.DbConnection.Tests;
 
 using System.Data.Common;
+using AwesomeAssertions;
 
 [TestFixture]
 public class NonQueryTests

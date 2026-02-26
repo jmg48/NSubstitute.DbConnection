@@ -1,11 +1,7 @@
 using System.Data;
-using System.Linq;
-
 using Dapper;
 using DapperQueryBuilder;
-using FluentAssertions;
 using InterpolatedSql.Dapper.SqlBuilders;
-using NUnit.Framework;
 
 namespace NSubstitute.DbConnection.Dapper.Tests;
 
